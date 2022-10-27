@@ -40,7 +40,8 @@ ACCI_DICT = {"sharp":get_asset("sharp.png"),"flat":get_asset("flat.png")}
 NOTE_TIME_DICT = {"whole":1.0,"half":0.5,"quarter":0.25,"eighth":0.125,"sixteenth":0.0625}
 NOTE_PICT_DICT = {"whole":get_asset("whole.png"),"half":get_asset("half.png"),"quarter":get_asset("quarter.png"),
     "eighth":get_asset("eighth.png"),"sixteenth":get_asset("sixteenth.png")}
-
+ERASER_DICT = {"eraser":get_asset("Knife.png")}
+INVERTER_DICT = {"inverse":get_asset("inverse.png")}
 
 ## Classes
 ##
@@ -81,8 +82,9 @@ class pybutton(pygame.sprite.Sprite): # Inherits from Sprite b/c has appearance
         self.image.blit(self.statusdict[self.statuslist[self.status]],(0,0))
 
 class Note(pygame.sprite.Sprite): # A note that appears on the paper, not including any marks.
-    def __init__(self,time,duration,pitch,accidental='natural',agrement=None,orientation=True,*groups):
+    def __init__(self,staff,time,duration,pitch,accidental='natural',agrement=None,orientation=True,*groups):
         super().__init__(*groups)
+        self.staff = staff # The staff in which the note appears
         self.time = time # The position in time in which this note is played, as a tuple of measure and quarter.
         self.duration = duration # The duration for which this note is played; e.g., 0.75 for dotted half note.
         self.pitch = pitch # The pitch of this note without accidental, e.g., 'c4' for C-sharp above middle C
@@ -91,54 +93,71 @@ class Note(pygame.sprite.Sprite): # A note that appears on the paper, not includ
         self.agrement = agrement # Any agrement the note carries.
         self.orientation = orientation # True if, for a quarter note, shaped like a d, False if like a p.
     
-    def set_position(self,staffpos,stafftime,staffclef):
-        distalong = int((self.time[0]-1+(self.time[1]-1)*stafftime[1]/(4*stafftime[0]))*STAFF_LENGTH/MEASURES_PER)
-        toprung = CLEF_NOTE_DICT[staffclef]
+    def set_position(self):
+        distalong = int((self.time[0]-1+(self.time[1]-1)*self.staff.timesig[1]/(4*self.staff.timesig[0]))*STAFF_LENGTH/MEASURES_PER)
+        toprung = CLEF_NOTE_DICT[self.staff.clef]
         rung = {'c':0,'d':1,'e':2,'f':3,'g':4,'a':5,'b':6}[self.pitch[0]] + 7*int(self.pitch[1])
         self.stepsdown = toprung - rung
-        headdown = int(self.stepsdown*STAFF_HEIGHT/8-NOTE_LINE/2)
+        headdown = int(self.stepsdown*STAFF_HEIGHT/8-NOTE_LINE)
         distdown = headdown - int(3*STAFF_HEIGHT/8)
         if self.orientation:
             distdown = headdown - int(9*STAFF_HEIGHT/8)
-        self.position = ( int(staffpos[0]+STAFF_HEIGHT/2+SIGN_STAFF_LENGTH+distalong), int(staffpos[1]+0.5*STAFF_HEIGHT+distdown) )
+        self.position = ( int(self.staff.position[0]+STAFF_HEIGHT/2+SIGN_STAFF_LENGTH+distalong), int(self.staff.position[1]+0.5*STAFF_HEIGHT+distdown) )
         print(f"Time: {self.time}")
    
     def generate_image(self):
         # Make image surface
-        self.image = pygame.Surface((int(self.duration*STAFF_LENGTH/MEASURES_PER),int(1.25*STAFF_HEIGHT)))
-        self.rect = pygame.Rect(self.position[0],self.position[1],self.image.get_width(),self.image.get_height())
-        self.image.fill(PAPER_COLOR)
+        #self.image = pygame.Surface((int(self.duration*STAFF_LENGTH/MEASURES_PER),int(1.25*STAFF_HEIGHT)))
+        self.rect = pygame.Rect(self.position[0],self.position[1],int(self.duration*STAFF_LENGTH/MEASURES_PER),int(1.25*STAFF_HEIGHT))
+        #self.image.fill(PAPER_COLOR)
         # Draw notehead to surface
-        centerx = int(STAFF_LENGTH/(32*MEASURES_PER))
-        headpos = (centerx,int(3*STAFF_HEIGHT/8))
+        centerx = int(STAFF_LENGTH/(32*MEASURES_PER)) + self.position[0]
+        headpos = (centerx,int(3*STAFF_HEIGHT/8) + self.position[1])
         if self.orientation:
-            headpos = (centerx,int(9*STAFF_HEIGHT/8))
+            headpos = (centerx,int(9*STAFF_HEIGHT/8) + self.position[1])
         if self.duration >= 0.5:
-            pygame.draw.circle(self.image,INK_COLOR,headpos,int(STAFF_HEIGHT/8),NOTE_LINE)
+            pygame.draw.circle(self.staff.screen,INK_COLOR,headpos,int(STAFF_HEIGHT/8),NOTE_LINE)
         else:
-            pygame.draw.circle(self.image,INK_COLOR,headpos,int(STAFF_HEIGHT/8))
+            pygame.draw.circle(self.staff.screen,INK_COLOR,headpos,int(STAFF_HEIGHT/8))
         # Draw note line to surface
         if self.duration < 1:
             if self.orientation:
-                pygame.draw.line(self.image,INK_COLOR,(int(centerx+STAFF_HEIGHT/8-NOTE_LINE),headpos[1]),(int(centerx+STAFF_HEIGHT/8-NOTE_LINE),int(STAFF_HEIGHT/4)),NOTE_LINE)
+                pygame.draw.line(self.staff.screen,INK_COLOR,(int(centerx+STAFF_HEIGHT/8-NOTE_LINE),headpos[1]),(int(centerx+STAFF_HEIGHT/8-NOTE_LINE),int(STAFF_HEIGHT/4+self.position[1])),NOTE_LINE)
             else:
-                pygame.draw.line(self.image,INK_COLOR,(int(centerx-STAFF_HEIGHT/8-NOTE_LINE),headpos[1]),(int(centerx-STAFF_HEIGHT/8-NOTE_LINE),self.image.get_height()),NOTE_LINE)
+                pygame.draw.line(self.staff.screen,INK_COLOR,(int(centerx-STAFF_HEIGHT/8+NOTE_LINE),headpos[1]),(int(centerx-STAFF_HEIGHT/8+NOTE_LINE),self.position[1]+self.rect.height),NOTE_LINE)
         # Draw dot (if it exists)
         if self.duration * 16 % 1 != 0:
-            pygame.draw.circle(self.image,INK_COLOR,(headpos[0]+int(STAFF_HEIGHT/8),headpos[1]),NOTE_LINE)
+            pygame.draw.circle(self.staff.screen,INK_COLOR,(headpos[0]+int(STAFF_HEIGHT/8),headpos[1]),NOTE_LINE)
         # Draw accidental (if it is marked)
         if self.accidented:
-            mark = pygame.transform.scale(ACCI_DICT[self.accidental],(STAFF_HEIGHT/4,STAFF_HEIGHT/3))
-            mark.blit(self.image,(int(headpos[0]-STAFF_HEIGHT/4),int(headpos[1]-STAFF_HEIGHT/3)))
+            print("The accidental is instructed to blit.")
+            mark = pygame.transform.scale(ACCI_DICT[self.accidental],(int(STAFF_HEIGHT/4),int(STAFF_HEIGHT/3)))
+            self.staff.screen.blit(mark,(int(headpos[0]-STAFF_HEIGHT/4),int(headpos[1]-STAFF_HEIGHT/3)))
         # Draw agrement (if it exists)
         # !!!!!!! Add agrements here!  They go above the note.
     
     def feel_click(self,selected_function):
         print(selected_function)
+        if selected_function in ACCI_DICT:
+            self.accidented = True
+            self.accidental = selected_function
+            self.generate_image()
+        elif selected_function == "inverse":
+            if self.orientation:
+                self.orientation = False 
+            else:
+                self.orientation = True 
+            self.set_position()
+        elif selected_function == "eraser":
+            if self.accidented:
+                self.accidented = False
+            else:
+                self.kill()
 
 class Staff(pygame.sprite.Sprite):
-    def __init__(self,position,clef='cclef',timesig=(4,4),notes=[],*groups):
+    def __init__(self,screen,position,clef='cclef',timesig=(4,4),notes=[],*groups):
         super().__init__(*groups)
+        self.screen = screen
         self.position = position # Absolute position on the screen.  Tuple.
         self.clef = clef # Clef at the front, as a string.
         self.timesig = timesig # Time signature, as a tuple, e.g. (3,4) for waltz time.
@@ -158,13 +177,14 @@ class Staff(pygame.sprite.Sprite):
         self.rect = pygame.Rect(self.position[0],self.position[1],self.image.get_width(),self.image.get_height())
         self.image.fill(PAPER_COLOR)
         for l in range(5):
-            pygame.draw.line(self.image,INK_COLOR,(int(STAFF_HEIGHT/2),int((2+l)*STAFF_HEIGHT/4)),(int(STAFF_LENGTH+SIGN_STAFF_LENGTH+STAFF_HEIGHT/2),int((2+l)*STAFF_HEIGHT/4)))
+            pygame.draw.line(self.screen,INK_COLOR,(int(STAFF_HEIGHT/2+self.position[0]),int((2+l)*STAFF_HEIGHT/4+self.position[1])),(int(STAFF_LENGTH+SIGN_STAFF_LENGTH+STAFF_HEIGHT/2)+self.position[0],int((2+l)*STAFF_HEIGHT/4+self.position[1])))
         for m in range(MEASURES_PER):
-            pygame.draw.line(self.image,INK_COLOR,(int(STAFF_HEIGHT/2+SIGN_STAFF_LENGTH+m*STAFF_LENGTH/MEASURES_PER),int(STAFF_HEIGHT/2)),(int(STAFF_HEIGHT/2+SIGN_STAFF_LENGTH+m*STAFF_LENGTH/MEASURES_PER),int(3*STAFF_HEIGHT/2)))
-        self.image.blit(pygame.transform.scale(CLEF_DICT[self.clef],(STAFF_HEIGHT,STAFF_HEIGHT)),(int(STAFF_HEIGHT/2),int(STAFF_HEIGHT/2)))
+            pygame.draw.line(self.screen,INK_COLOR,(int(STAFF_HEIGHT/2+SIGN_STAFF_LENGTH+m*STAFF_LENGTH/MEASURES_PER+self.position[0]),int(STAFF_HEIGHT/2+self.position[1])),(int(STAFF_HEIGHT/2+SIGN_STAFF_LENGTH+m*STAFF_LENGTH/MEASURES_PER+self.position[0]),int(3*STAFF_HEIGHT/2+self.position[1])))
+        self.screen.blit(pygame.transform.scale(CLEF_DICT[self.clef],(STAFF_HEIGHT,STAFF_HEIGHT)),(int(STAFF_HEIGHT/2+self.position[0]),int(STAFF_HEIGHT/2+self.position[1])))
         # Add time signature blit here
         for eachnote in self.notes:
-            self.image.blit(eachnote.image,(eachnote.position[0]-self.position[0],eachnote.position[1]-self.position[1]))
+            eachnote.generate_image()
+            #self.image.blit(eachnote.image,(eachnote.position[0]-self.position[0],eachnote.position[1]-self.position[1]))
     
     def change_clef(self):
         cleflist = list(CLEF_DICT)
@@ -188,6 +208,7 @@ class Staff(pygame.sprite.Sprite):
             for eachnote in self.notes:
                 if eachnote.rect.collidepoint(mousepos):
                     eachnote.feel_click(selected_function)
+                    self.generate_image()
                     return False
             if selected_function in NOTE_TIME_DICT:
                 duration = NOTE_TIME_DICT[selected_function]
@@ -200,9 +221,9 @@ class Staff(pygame.sprite.Sprite):
                 toprung = CLEF_NOTE_DICT[self.clef]
                 notename = {0:'c',1:'d',2:'e',3:'f',4:'g',5:'a',6:'b'}[(toprung-stepsdown) % 7]
                 noteoctave = (toprung-stepsdown) // 7
-                newnote = Note(time,duration,notename+str(noteoctave))
-                newnote.set_position(self.position,self.timesig,self.clef)
-                newnote.generate_image()
+                newnote = Note(self,time,duration,notename+str(noteoctave))
+                newnote.set_position()
+                #newnote.generate_image(screen)
                 self.notes.add(newnote)
                 self.generate_image()
 
@@ -219,6 +240,8 @@ def main():
     accibutton = pybutton(ACCI_DICT,(2*BUFFER+BUTTON_DIM[0],WINDOW_DIM[1]-BUTTON_DIM[1]-BUFFER))
     notebutton = pybutton(NOTE_PICT_DICT,(3*BUFFER+2*BUTTON_DIM[0],WINDOW_DIM[1]-BUTTON_DIM[1]-BUFFER))
     buttons = pygame.sprite.Group(clefbutton,accibutton,notebutton)
+    flipbutton = pybutton(INVERTER_DICT,(4*BUFFER+3*BUTTON_DIM[0],WINDOW_DIM[1]-BUTTON_DIM[1]-BUFFER),buttons)
+    pybutton(ERASER_DICT,(5*BUFFER+4*BUTTON_DIM[0],WINDOW_DIM[1]-BUTTON_DIM[1]-BUFFER),buttons)
     buttons.draw(screen)
 
     # Draw Elisabeth
@@ -229,12 +252,19 @@ def main():
     pygame.draw.rect(screen,PAPER_COLOR,(int(STAFF_HEIGHT/2),int(STAFF_HEIGHT/2),PAGEDIM[0],PAGEDIM[1]))
     staves = pygame.sprite.Group()
     for s in range(STAVES*STAVES_PER):
-        staves.add(Staff((int(STAFF_HEIGHT/2),int((4*s+1)*STAFF_HEIGHT/2))))
-    staves.draw(screen)
+        staves.add(Staff(screen,(int(STAFF_HEIGHT/2),int((4*s+1)*STAFF_HEIGHT/2))))
+    for eachstaff in staves:
+        eachstaff.generate_image()
+    #staves.draw(screen)
     
     pygame.display.update()
 
     selected_function = 'select'
+
+    def redraw_staff_paper():
+        pygame.draw.rect(screen,PAPER_COLOR,(int(STAFF_HEIGHT/2),int(STAFF_HEIGHT/2),PAGEDIM[0],PAGEDIM[1]))
+        for eachstaff in staves:
+            eachstaff.generate_image()
 
     while True:
         for e in pygame.event.get():
@@ -258,7 +288,8 @@ def main():
                     for eachstaff in staves:
                         if eachstaff.rect.collidepoint(e.pos):
                             eachstaff.feel_click(e.pos,selected_function)
-                            eachstaff.notes.draw(screen)
+                            if selected_function in ["eraser","inverse"]:
+                                redraw_staff_paper()
             pygame.display.update()
 
 if __name__ == '__main__':
