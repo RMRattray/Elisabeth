@@ -259,8 +259,8 @@ class Note():
             else:
                 pygame.draw.line(self.staff.screen,INK_COLOR,(int(centerx-STAFF_HEIGHT/8+NOTE_LINE),headpos[1]),self.tip_position,NOTE_LINE)
         # Draw dot (if it exists)
-        if self.duration * 16 % 1 != 0:
-            pygame.draw.circle(self.staff.screen,INK_COLOR,(headpos[0]+int(STAFF_HEIGHT/8),headpos[1]),NOTE_LINE)
+        if self.duration * 32 % 3 == 0:
+            pygame.draw.circle(self.staff.screen,INK_COLOR,(headpos[0]+int(STAFF_HEIGHT/4),headpos[1]),NOTE_LINE)
         # Draw accidental (if it is marked)
         if self.accidental != '':
             mark = pygame.transform.scale(ACCI_DICT[self.accidental],(int(STAFF_HEIGHT/4),int(STAFF_HEIGHT/3)))
@@ -304,7 +304,7 @@ class Note():
             else:
                 self.staff.notes.remove(self)
         elif selected_function == "dot":
-            if self.duration * 16 % 1 != 0:
+            if self.duration * 32 % 3 != 0:
                 self.duration *= 1.5
                 self.rect.width = int(self.rect.width*1.5)
                 self.generate_image()
