@@ -23,6 +23,8 @@ import math
 import pygame
 from pygame import sprite
 pygame.init()
+pygame.mixer.init()
+pygame.mixer.music.set_volume(1.0)
 import os
 from midiutil import MIDIFile
 
@@ -186,6 +188,7 @@ class pybutton(pygame.sprite.Sprite): # Inherits from Sprite b/c has appearance
         for y in range(0,self.image.get_height()-2,2):
             pygame.draw.line(self.image,UNCLICKED_BUTTON,(0,y),(self.image.get_width(),y))
 
+################################################################################
 ## This research project was started because of unfamiliarity with the notation
 ## used by Elisabeth Jean-Claude Jacquet de la Guerre in her Suite in A Minor,
 ## so the appearance of notes in the game is based on her manuscript, specifically:
@@ -197,31 +200,51 @@ class pybutton(pygame.sprite.Sprite): # Inherits from Sprite b/c has appearance
 ## is considered too complicated for this program, however, and the appearance of normal-ish
 ## notes and familiar bar lines makes up this game.  Details for note appearance
 ## atypical of today's music are marked with ## comments throughout the Note class.
+#################################################################################
 
 class Note():
     def __init__(self,staff,time,duration,pitch,accidental='',agrement='',orientation=True):
         self.staff = staff # The staff in which the note appears (a Staff object)
-        self.time = time # The position in time in which this note is played, as a tuple of measure and quarter.
+        self.time = time # The position in time in which this note is played, as a tuple of measure and beat.
         self.duration = duration # The duration for which this note is played; e.g., 0.75 for dotted half note.
         self.pitch = pitch # The pitch of this note without accidental, e.g., 'c4' for C-sharp above middle C
         self.accidental = accidental # Either 'sharp,' '' or 'flat.'
+        ###########################################################################################
         ## As seen in the third measure of the first "Allemande," and throughout the suite,
         ## accidentals do not carry from note to note, even within the same octave and measure
         ## (or else de la Guerre is including unusually many courtesy accidentals).
+        ###########################################################################################
         # As such, the variable self.accidental determines whether an accidental appears and is used to
         # find the pitch for the MIDI output all the same.
         self.agrement = agrement # Any agrement the note carries.
         self.orientation = orientation # True if, for a quarter note, shaped like a d, False if like a p.
+        ##################################################################################################
         ## Also seen throughout the piece are inverted notes with their stems proceeding from their middle,
         ## not the left side.  This change of appearance is reflect in the game.  And though today it is
         ## conventional for notes' orientations to be determined by where they appear in relation to the
         ## central line of a staff, in Jacquet de la Guerre's pieces it is more often a function of its
         ## voicing (still typical of choral music today), so this orientation is determined by the player.
+        ##################################################################################################
     
-    def __str__(self):
+    def __str__(self): # This method isn't working but it isn't ever called either.
         return f"Note {self.pitch} at {self.time} in Staff #{self.staff.id}."
     
     def set_position(self):
+        ##################################################################################################
+        ## In de la Guerre's Prelude, the evidence for what appear to be whole notes not being played as
+        ## such is that they are not spaced as far apart as quarter notes would be; they are intended to
+        ## be played as arpeggiated chords, according to:
+        ##
+        ## Burkholder, J. Peter and Claude V. Palisca.  “85:  Elisabeth Jean-Claude Jacquet de la Guerre, 
+        ## Suite No. 3 in A Minor.”  In Norton Anthology of Western music, Sixth Edition, Volume One: 
+        ## Ancient to Baroque, 584-98.  New York:  W. W. Norton & Company, 2010.
+        ##
+        ## Though of course not every whole note need be as far from its neighbor as sixteen sixteenth notes
+        ## put together would be, de la Guerre was at least familiar with the intuitive idea that longer
+        ## notes should have more space after them.  As such, it is not unreasonable that this game assume
+        ## note be placed in time based on where the player clicks relative to the measure bars, as opposed
+        ## to, say, having notes be placed in the order the player clicks them.
+        #################################################################################################
         # For the sake of simplicity, notes appear in precise locations based on beat.
         distalong = int((self.time[0]-1+(self.time[1]-1)*self.staff.timesig[1]/(4*self.staff.timesig[0]))*STAFF_LENGTH/MEASURES_PER)
         toprung = CLEF_NOTE_DICT[self.staff.clef]
@@ -238,11 +261,22 @@ class Note():
         else:
             self.tip_position = (int(centerx-STAFF_HEIGHT/8+NOTE_LINE),self.position[1]+self.rect.height)
         self.rect = pygame.Rect(self.position[0],self.position[1],int(self.duration*STAFF_LENGTH*self.staff.timesig[1]/(MEASURES_PER*self.staff.timesig[0])),int(1.25*STAFF_HEIGHT))
-   
+    
+    # This method convert the printed pitch (like 'b4' with a sharp or 'c5') to a MIDI pitch (like '72').
+    def midi_pitch(self):
+        midi_pitch = {'c':0,'d':2,'e':4,'f':5,'g':7,'a':9,'b':11}[self.pitch[0]] + 12*int(self.pitch[1]) + 12
+        if self.accidental == 'sharp':
+            midi_pitch += 1
+        elif self.accidental == 'flat':
+            midi_pitch -= 1
+        return midi_pitch
+
+    # This method returns the duration of the note in MIDI, which is in beats.
+    def midi_duration(self):
+        return self.duration*self.staff.timesig[1]
+
+    # This method draws the note onto the screen.
     def generate_image(self):
-        # Make image surface
-        #self.image = pygame.Surface((int(self.duration*STAFF_LENGTH/MEASURES_PER),int(1.25*STAFF_HEIGHT)))
-        #self.image.fill(PAPER_COLOR)
         # Draw notehead to surface
         centerx = int(STAFF_LENGTH/(32*MEASURES_PER)) + self.position[0]
         headpos = (centerx,int(3*STAFF_HEIGHT/8) + self.position[1])
@@ -252,7 +286,7 @@ class Note():
             pygame.draw.circle(self.staff.screen,INK_COLOR,headpos,int(STAFF_HEIGHT/8),NOTE_LINE)
         else:
             pygame.draw.circle(self.staff.screen,INK_COLOR,headpos,int(STAFF_HEIGHT/8))
-        # Draw note line to surface
+        # Draw note stem to surface
         if self.duration < 1:
             if self.orientation:
                 pygame.draw.line(self.staff.screen,INK_COLOR,(int(centerx+STAFF_HEIGHT/8-NOTE_LINE),headpos[1]),self.tip_position,NOTE_LINE)
@@ -270,6 +304,7 @@ class Note():
             mark = pygame.transform.scale(AGREMENT_DICT[self.agrement],(int(STAFF_HEIGHT/3),int(STAFF_HEIGHT/3)))
             self.staff.screen.blit(mark,(int(centerx-STAFF_HEIGHT/6),int(self.position[1]-STAFF_HEIGHT/3)))
     
+    # This method draws an eighth note or sixteenth note's flag/tail.
     def flag(self):
         if self.duration < 0.25:
             if self.orientation:
@@ -286,23 +321,34 @@ class Note():
                     pygame.draw.line(self.staff.screen,INK_COLOR,(self.tip_position[0],self.tip_position[1]-4*NOTE_LINE),(self.tip_position[0]+2*NOTE_LINE,self.tip_position[1]-8*NOTE_LINE),NOTE_LINE)
                     pygame.draw.arc(self.staff.screen,INK_COLOR,[self.tip_position[0]-int(NOTE_LINE*6),self.tip_position[1]-14*NOTE_LINE,int(NOTE_LINE*9.2),int(8*NOTE_LINE)],-math.atan(1/2)-0.1,math.atan(1/2),NOTE_LINE)
     
+    # This method runs when a note (or the invisible box around it) is clicked on.
+    # Note that the box pertains more to the portion of the measure in which the note is played and where the stem is;
+    # agrements, accidentals, and dots can all be printed outside this box.
     def feel_click(self,selected_function):
+        # Clicking with the accidental function will cause that accidental to appear.
         if selected_function in ACCI_DICT:
             self.accidental = selected_function
             self.generate_image()
+        # Clicking with the inverse function will invert the note (d to q and vice versa).
         elif selected_function == "inverse":
             if self.orientation:
                 self.orientation = False 
             else:
                 self.orientation = True 
             self.set_position()
+        # Clicking on the note with the eraser will get rid of an agrement, then a dot, then an accidental, then the note itself.
         elif selected_function == "eraser":
             if self.agrement != '':
                 self.agrement = ''
+            elif self.duration * 32 % 3 == 0:
+                self.duration *= 2/3
+                self.rect.width = int(self.rect.width*2/3)
+                self.generate_image()
             elif self.accidental != '':
                 self.accidental = ''
             else:
                 self.staff.notes.remove(self)
+        # The dot function will add or remove a dot.
         elif selected_function == "dot":
             if self.duration * 32 % 3 != 0:
                 self.duration *= 1.5
@@ -312,10 +358,16 @@ class Note():
                 self.duration *= 2/3
                 self.rect.width = int(self.rect.width*2/3)
                 self.generate_image()
+        # Agrement function causes agrement marks to appear.
         elif selected_function in AGREMENT_DICT:
             self.agrement = selected_function
             self.generate_image()
 
+# This class - staff - includes a list of the Note objects that are the notes appearing on it,
+# as well as the clef, time signature, and other features.  All notes can refer to their Staff
+# object via the self.staff attribute.  This sort of circular reference is discouraged by
+# theoretical programmers because of the inherent dangers, but they aren't here.
+# Neither the programmers, nor the dangers.
 class Staff():
     def __init__(self,screen,position,id,clef='cclef',timename="common"):
         self.screen = screen
@@ -345,6 +397,21 @@ class Staff():
         for eachnote in self.notes:
             eachnote.generate_image()
         # Connect stems of eighth notes, sixteeth notes in same beat
+        ######################################################################################################
+        ## One thing of interest in de la Guerre's original manuscript, not present in the newer copies, is the
+        ## way she beams notes.  If a sixteenth note follows a dotted eighth note, sharing a beat, as occurs
+        ## in the second measure of the Allemande and throughout, they are beamed together, but while today one
+        ## would usually indicate the latter note being a mere sixteeth by a tick towards the eighth, (as in
+        ##
+        ## Jacquet de la Guerre, Elisabeth.  “Troisème suite” in Pièces de clavecin, livre 1, ed. Pierre Gouin
+        ## (Montréal:  Les Éditions Outremontaises, 2022), 26-39.
+        ##
+        ## a more recent edition of the same), in her original manuscript the sixteenth note points its tails
+        ## rightward.  Also of note is that her beams are not always straight as modern ones, especially when
+        ## notes on a beat are not purely in ascent or descent; they may curve and stems stick across the beam.
+        ## There is no clear pattern to these curves, however; they are not always a translation of the curved
+        ## line that would pass through the noteheads, for example, so for this program beams remain straight.
+        ########################################################################################################
         def beam(noteset):
             # Look at the d-notes and p-notes separately.  If there is only one, it should flag itself.
             if len(noteset) == 1:
@@ -469,6 +536,7 @@ def main():
     Something something agrements.''',buttons)
     playbutton = pybutton(PLAY_DICT,(WINDOW_DIM[0]-CHAT_WIDTH-BUFFER,BUTTON_RECT.top+BUFFER),'''
     Something about the harpischord for the play button.''')
+    #PLAY_RECT = pygame.Rect(CHAT_RECT.left+BUFFER,CHAT_RECT.bottom+BUFFER,CHAT_WIDTH-2*BUFFER,BUTTON_DIM[1])
     playbutton.rect.width = CHAT_WIDTH-2*BUFFER
     playbutton.rect.left = CHAT_RECT.left + BUFFER
     playbutton.image = pygame.Surface((CHAT_WIDTH-2*BUFFER,BUTTON_DIM[1]))
@@ -512,6 +580,22 @@ def main():
         pygame.draw.rect(screen,PAPER_COLOR,(int(STAFF_HEIGHT/2),int(STAFF_HEIGHT/2),PAGEDIM[0],PAGEDIM[1]))
         for eachstaff in staves:
             eachstaff.generate_image()
+    
+    def output_music():
+        agrements = False
+        BEATS_PER_STAFF = staves[0].timesig[0]*MEASURES_PER
+        outputMIDI = MIDIFile(1)
+        outputMIDI.addTempo(0,0,120) # The last argument here is tempo in BPM
+        for eachstaff in staves:
+            for eachnote in eachstaff.notes:
+                if eachnote.agrement == '':
+                    outputMIDI.addNote(0,0,eachnote.midi_pitch(),BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote),eachnote.midi_duration(),100)
+                else:
+                    agrements = True # Add dictionary of agrements here!
+        with open("output.mid","wb") as output_file:
+            outputMIDI.writeFile(output_file)
+        os.startfile("output.mid")
+        return agrements
     
     # The real game begins here!
     speech = '''Bonjour!  Je m'appelle Elisabeth Jean-Claude Jacquet de la Guerre.
@@ -601,6 +685,8 @@ def main():
                             if eachbutton.rect.collidepoint(e.pos):
                                 parle(screen,eachbutton.explanation)
                             selected_function = 'select'
+                        if playbutton.rect.collidepoint(e.pos):
+                            parle(screen,playbutton.explanation)
                     else:
                         selected_function = 'select'
                         for eachbutton in buttons:
@@ -610,6 +696,14 @@ def main():
                             else:
                                 eachbutton.unselect()
                         buttons.draw(screen)
+                        if playbutton.rect.collidepoint(e.pos):
+                            print("Music should be playing.")
+                            if output_music():
+                                speech = '''The piece has agréments and is good'''
+                            else:
+                                speech = '''How dreadfully plain… so rigid and boring. What is a piece without embellishment?
+                                Spice it up with some agréments, no?'''
+                            parle(screen,speech)
                 elif PAPER_RECT.collidepoint(e.pos): # If a click in the paper area.
                     for eachstaff in staves:
                         if eachstaff.rect.collidepoint(e.pos):
@@ -624,10 +718,6 @@ def main():
                     [Click on something for an explanation of it.]'''
                     parle(screen,speech)
                     selected_function = 'explain'
-                elif playbutton.rect.collidepoint(e.pos):
-                    speech = '''How dreadfully plain… so rigid and boring. What is a piece without embellishment?
-                    Spice it up with some agréments, no?'''
-                    parle(screen,speech)
 
             pygame.display.update()
 
