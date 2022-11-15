@@ -195,11 +195,19 @@ class pybutton(pygame.sprite.Sprite): # Inherits from Sprite b/c has appearance
 ##
 ## Jacquet de la Guerre, Elisabeth.  Pièces de clavecín, livre 1 (Paris:  de Baussen, 1687).
 ##
-## accessed through the Petrucci Music Library.  The Prelude presents the most challenging
-## notation to imitate, with its own unique expectations for improvisation.  Such style
-## is considered too complicated for this program, however, and the appearance of normal-ish
-## notes and familiar bar lines makes up this game.  Details for note appearance
-## atypical of today's music are marked with ## comments throughout the Note class.
+## accessed through the Petrucci Music Library.  Another main topic of discussion in this 
+## project is the difference in technological methods of composition between now and when 
+## the piece was composed.  The creation of a modern computer program to compose this piece 
+## is contrasted with the simple, yet nuanced method of manually writing a piece on 
+## parchment, which de la Guerre used in her time. Expectedly, the human element of a 
+## composition can not be perfectly represented through recreation with a computer 
+## program, so ambiguously interpretable aspects of the piece are lost in translation.
+##
+## The Prelude presents the most challenging notation to imitate, with its own unique 
+## expectations for improvisation.  Such style is considered too complicated for this 
+## program, however, and the appearance of normal-ish notes and familiar bar lines makes 
+## up this game.  Details for note appearance atypical of today's music are 
+## marked with ## comments throughout the Note class.
 #################################################################################
 
 class Note():
