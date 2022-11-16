@@ -520,7 +520,7 @@ def main():
     clefbutton = pybutton(UPPER_CLEF_DICT,(BUFFER,BUTTON_RECT.top+BUFFER))
     timebutton = pybutton(TIME_DICT,(2*BUFFER+BUTTON_DIM[0],BUTTON_RECT.top+BUFFER))
     pybutton(ACCI_DICT,(3*BUFFER+2*BUTTON_DIM[0],BUTTON_RECT.top+BUFFER),'''
-    Something something accidentals''',buttons)
+    If you wish to raise or lower a note by a half step, select the button with a sharp/flat in the “toolbox”, if that is what you call it.''',buttons)
     pybutton(NOTE_PICT_DICT,(4*BUFFER+3*BUTTON_DIM[0],BUTTON_RECT.top+BUFFER),'''
     Something something note durations''',buttons)
     pybutton(INVERTER_DICT,(5*BUFFER+4*BUTTON_DIM[0],BUTTON_RECT.top+BUFFER),'''
@@ -533,7 +533,8 @@ def main():
     pybutton(DOT_DICT,(7*BUFFER+6*BUTTON_DIM[0],BUTTON_RECT.top+BUFFER),'''
     To extend a note by half its length, use this funny-looking dot.''',buttons)
     pybutton(AGREMENT_DICT,(8*BUFFER+7*BUTTON_DIM[0],BUTTON_RECT.top+BUFFER),'''
-    Something something agrements.''',buttons)
+    Les agréments are most important if you wish to give more feeling to the piece. Please, for my sake, give your musique some more flavor by pressing this button
+    and clicking on your notes.''',buttons)
     playbutton = pybutton(PLAY_DICT,(WINDOW_DIM[0]-CHAT_WIDTH-BUFFER,BUTTON_RECT.top+BUFFER),'''
     Something about the harpischord for the play button.''')
     #PLAY_RECT = pygame.Rect(CHAT_RECT.left+BUFFER,CHAT_RECT.bottom+BUFFER,CHAT_WIDTH-2*BUFFER,BUTTON_DIM[1])
@@ -581,17 +582,42 @@ def main():
         for eachstaff in staves:
             eachstaff.generate_image()
     
+    # This code takes the notes on-screen and makes a MIDI piece of them.
+    # It also gauges whether the player uses agréments, and returns that Boolean.
+    ################################################################################
+    ## In producing the game's MIDI output, it was necessary to make assumptions
+    ## about dynamics and tempo, which are not indicated in either edition of de la Guerre's
+    ## scores.  About dynamics, it is stated in
+    ##
+    ## Moersch, Charlotte Mattax.  “Keyboard Improvisation in the Baroque Period.”
+    ## In Musical Improvisation:  Art, Education, and Society edited by Solis, Gabriel
+    ## and Bruno Nettl, 150-170.  Chicago:  University of Illinois, 2009.
+    ##
+    ## that the harpsichord did not have dynamics (this is the namesake of the pianoforte,
+    ## invented in 1720, nine years before de la Guerre's death); as such, every note is
+    ## given the maximum volume.  Regarding tempo,
+    ###################################################################################
+    # TODO see if any sources describe tempo and if not try to figure it from a recording
+    ##################################################################################
+    ## The most interesting - and most difficult to interpret - feature of de la Guerre's works
+    ## is the agréments.  Though de la Guerre did not publish a guide to interpreting them,
+    ## other composers, such as d'Anglebert and Couperin, published conflicting guides
+    ## at different times.
+    ###################################################################################
+    # TODO make dictionary of agréments.
     def output_music():
         agrements = False
         BEATS_PER_STAFF = staves[0].timesig[0]*MEASURES_PER
-        outputMIDI = MIDIFile(1)
-        outputMIDI.addTempo(0,0,120) # The last argument here is tempo in BPM
+        outputMIDI = MIDIFile(1) # A one-track MIDI file
+        outputMIDI.addTempo(0,0,120) # The arguments here are track, time in beats when track begins, and tempo.
+        outputMIDI.addProgramChange(0,0,0,6) # Changes instrument to harpsichord (first three args are track, channel, time)
+        # Note that a harpsichord is 7 is standard MIDI's 1-origin list, but 6 in the library's 0-origin list.
         for eachstaff in staves:
             for eachnote in eachstaff.notes:
-                if eachnote.agrement == '':
+                if eachnote.agrement == '': # The arguments are track, channel (as in both, left, or right), pitch, time, duration, and volume
                     outputMIDI.addNote(0,0,eachnote.midi_pitch(),BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote),eachnote.midi_duration(),100)
                 else:
-                    agrements = True # Add dictionary of agrements here!
+                    agrements = True # Add code for agréments here!
         with open("output.mid","wb") as output_file:
             outputMIDI.writeFile(output_file)
         os.startfile("output.mid")
@@ -603,7 +629,7 @@ def main():
     Care to join me, mon amis?
     \n\n
     [Press any key to continue.]'''
-    parle(screen,speech)
+    parle(screen,speech) # Put her words up and wait for a keypress or mouse click.
     if wait_press() == -1:
         return
     speech = '''Incroyable!  First, let us commence with the time signature.
@@ -612,9 +638,9 @@ def main():
     [Press the time signature button to browse time signatures.
     Click the staff paper to apply one.]'''
     parle(screen,speech)
-    timebutton.selectable = True
-    while timebutton.selectable:
-        for e in pygame.event.get():
+    timebutton.selectable = True # Let player click on the time signature button to scroll
+    while timebutton.selectable: # through the time signatures available, then apply it
+        for e in pygame.event.get(): # the moment staff paper is clicked.
             if e.type == pygame.QUIT:
                 return
             elif e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
@@ -627,14 +653,16 @@ def main():
                 elif PAPER_RECT.collidepoint(e.pos):
                     for s in range(SYSTEMS*STAVES_PER):
                         staves[s].change_time(timebutton.statuslist[timebutton.status])
-                    timebutton.grey()
-                    screen.blit(timebutton.image,timebutton.rect)
+                    timebutton.grey() # After time signature is chosen, player cannot change it.
+                    screen.blit(timebutton.image,timebutton.rect) # What would that do to all the notes?
                     timebutton.selectable = False
-    speech = '''Something something C clef in my day.
+    speech = '''Change or add a clef in your piece with this tool here.
+    Unfortunately, to accommodate to your perverted modern ways of notation,
+    I have made my C-clef shaped in a more wavy and less rigid manner.”
     \n\n
     [Click the clef button to select an upper clef.
     Click the staff paper to apply it.]'''
-    parle(screen,speech)
+    parle(screen,speech) # Same process with choosing a C-clef or a G-clef for the upper register.
     clefbutton.selectable = True
     while clefbutton.selectable:
         for e in pygame.event.get():
@@ -657,7 +685,7 @@ def main():
     Then, let the artiste in you choose where in the piece to place it.
     \n\n
     [Press any key to continue.]'''
-    parle(screen,speech)
+    parle(screen,speech) # Player must go through two dialogues before playing.
     if wait_press() == -1:
         return 
     speech = '''Once your composition is finished, push the play button on the bottom right of the parchment and let la musique play.
@@ -666,12 +694,18 @@ def main():
     [Press any key to continue.]'''
     parle(screen,speech)
     if wait_press() == -1:
-        return
-    parle(screen,"Alright, mon amis, if you need any more instruction, just click on my beautiful visage.")
+        return # Last message remains up.
+    parle(screen,"Alright, mes amis, if you need any more instruction, just click on my beautiful visage.")
 
     for eachbutton in buttons:
         eachbutton.selectable = True
 
+    # Main loop of game - all buttons except clef and time are available.
+    # Check for game exiting and clicking on buttons, staff paper, and Elisabeth.
+    # The player's current intentions are given by the 'selected_function' variable -
+    # 'select' means player can only click buttons or Elisabeth,
+    # 'explain' means player has just clicked on Elisabeth and whatever is clicked on next gives explanation, not function
+    # anything else (the function of the most recently clicked button) is passed to staves/notes clicked on.
     while True:
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
@@ -699,12 +733,12 @@ def main():
                         if playbutton.rect.collidepoint(e.pos):
                             print("Music should be playing.")
                             if output_music():
-                                speech = '''The piece has agréments and is good'''
+                                speech = '''Magnifique! I had my doubts, however, you have made a Baroque piece to rival even my talents (not really).'''
                             else:
                                 speech = '''How dreadfully plain… so rigid and boring. What is a piece without embellishment?
                                 Spice it up with some agréments, no?'''
                             parle(screen,speech)
-                elif PAPER_RECT.collidepoint(e.pos): # If a click in the paper area.
+                elif PAPER_RECT.collidepoint(e.pos):
                     for eachstaff in staves:
                         if eachstaff.rect.collidepoint(e.pos):
                             eachstaff.feel_click(e.pos,selected_function)
@@ -713,6 +747,7 @@ def main():
                             elif selected_function in ["eighth","sixteenth"]:
                                 eachstaff.generate_image()
                 elif e.pos[0] > CHAT_RECT.left and e.pos[1] < CHAT_RECT.top:
+                    # TODO Have her object to being clicked on repeatedly?
                     speech = '''So you’ve come back for more… Listen, s’il vous plaît, and I will provide a few more tips.
                     \n\n
                     [Click on something for an explanation of it.]'''
