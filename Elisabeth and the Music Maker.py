@@ -40,6 +40,7 @@ SYSTEMS = 3 # The number of systems, or grand staves, of music in the window
 STAVES_PER = 2 # The number of staves in each grand staff
 MEASURES_PER = 4 # The number of measures each staff is across.
 STAFF_HEIGHT = int(PAPER_RECT.height/(3*SYSTEMS*STAVES_PER+1))
+print(STAFF_HEIGHT)
 # STAFF_HEIGHT is the distance between the highest and lowest non-ledger line in a staff
 STAFF_LENGTH = PAPER_RECT.width - 4*STAFF_HEIGHT # The length of the paper of the staff with notes
 SIGN_STAFF_LENGTH = 2*STAFF_HEIGHT # The part of the staff reserved for clef and time signature
@@ -256,13 +257,13 @@ class Note():
         # For the sake of simplicity, notes appear in precise locations based on beat.
         distalong = int((self.time[0]-1+(self.time[1]-1)*self.staff.timesig[1]/(4*self.staff.timesig[0]))*STAFF_LENGTH/MEASURES_PER)
         toprung = CLEF_NOTE_DICT[self.staff.clef]
-        rung = {'c':0,'d':1,'e':2,'f':3,'g':4,'a':5,'b':6}[self.pitch[0]] + 7*int(self.pitch[1])
-        self.stepsdown = toprung - rung
-        headdown = int((self.stepsdown-1)*STAFF_HEIGHT/8)
+        self.rung = {'c':0,'d':1,'e':2,'f':3,'g':4,'a':5,'b':6}[self.pitch[0]] + 7*int(self.pitch[1])
+        self.stepsdown = toprung - self.rung
+        headdown = int(self.stepsdown*STAFF_HEIGHT/8)
         distdown = headdown - int(3*STAFF_HEIGHT/8)
         if self.orientation:
             distdown = headdown - int(9*STAFF_HEIGHT/8)
-        self.position = ( int(self.staff.position[0]+STAFF_HEIGHT/2+SIGN_STAFF_LENGTH+distalong), int(self.staff.position[1]+0.5*STAFF_HEIGHT+distdown) )
+        self.position = ( int(self.staff.position[0]+STAFF_HEIGHT/2+SIGN_STAFF_LENGTH+distalong), int(self.staff.position[1]+STAFF_HEIGHT+distdown) )
         centerx = int(STAFF_LENGTH/(32*MEASURES_PER)) + self.position[0]
         if self.orientation:
             self.tip_position = (int(centerx+STAFF_HEIGHT/8-NOTE_LINE),int(STAFF_HEIGHT/4+self.position[1]))
@@ -311,7 +312,19 @@ class Note():
         if self.agrement != '':
             mark = pygame.transform.scale(AGREMENT_DICT[self.agrement],(int(STAFF_HEIGHT/3),int(STAFF_HEIGHT/3)))
             self.staff.screen.blit(mark,(int(centerx-STAFF_HEIGHT/6),int(self.position[1]-STAFF_HEIGHT/3)))
-    
+        # Draw ledger lines (if necessary)
+        print(self.rung,CLEF_NOTE_DICT[self.staff.clef],self.pitch)
+        if self.rung > CLEF_NOTE_DICT[self.staff.clef]:
+            for l in range((self.rung - CLEF_NOTE_DICT[self.staff.clef]) // 2):
+                y = int(self.staff.position[1]+STAFF_HEIGHT-(l+1)*STAFF_HEIGHT/4)
+                print(l,y,self.staff.position[1])
+                pygame.draw.line(self.staff.screen,INK_COLOR,(int(centerx-STAFF_HEIGHT/6),y),(int(centerx+STAFF_HEIGHT/6),y))
+        elif self.rung < CLEF_NOTE_DICT[self.staff.clef] - 8:
+            for l in range((CLEF_NOTE_DICT[self.staff.clef] - 8 - self.rung) // 2):
+                y = int(self.staff.position[1]+2*STAFF_HEIGHT+(l+1)*STAFF_HEIGHT/4)
+                print(l,y,self.staff.position[1])
+                pygame.draw.line(self.staff.screen,INK_COLOR,(int(centerx-STAFF_HEIGHT/6),y),(int(centerx+STAFF_HEIGHT/6),y))
+
     # This method draws an eighth note or sixteenth note's flag/tail.
     def flag(self):
         if self.duration < 0.25:
@@ -385,7 +398,7 @@ class Staff():
         self.timesig = TIME_TUPLE_DICT[timename] # Time signature, as a tuple, e.g. (4,4)
         self.notes = []
         self.id = id
-        self.rect = pygame.Rect(self.position[0],self.position[1],STAFF_LENGTH+SIGN_STAFF_LENGTH+STAFF_HEIGHT,2*STAFF_HEIGHT)
+        self.rect = pygame.Rect(self.position[0],self.position[1],STAFF_LENGTH+SIGN_STAFF_LENGTH+STAFF_HEIGHT,3*STAFF_HEIGHT)
 
     # The process by which a staff renders itself, based on the notation in Elisabeth Jean-Claude Jacquet de la Guerre's
     # own score for her Suite in A Minor, is described below.
@@ -394,13 +407,14 @@ class Staff():
         pygame.draw.rect(self.screen,PAPER_COLOR,self.rect)
         # Draw five horizontal lines and vertical lines in between measures.
         for l in range(5):
-            pygame.draw.line(self.screen,INK_COLOR,(int(STAFF_HEIGHT/2+self.position[0]),int((2+l)*STAFF_HEIGHT/4+self.position[1])),(int(STAFF_LENGTH+SIGN_STAFF_LENGTH+STAFF_HEIGHT/2)+self.position[0],int((2+l)*STAFF_HEIGHT/4+self.position[1])))
+            y = int(l*STAFF_HEIGHT/4+self.position[1]+STAFF_HEIGHT)
+            pygame.draw.line(self.screen,INK_COLOR,(int(STAFF_HEIGHT/2+self.position[0]),y),(int(STAFF_LENGTH+SIGN_STAFF_LENGTH+STAFF_HEIGHT/2)+self.position[0],y))
         for m in range(MEASURES_PER):
-            pygame.draw.line(self.screen,INK_COLOR,(int(STAFF_HEIGHT/2+SIGN_STAFF_LENGTH+m*STAFF_LENGTH/MEASURES_PER+self.position[0]),int(STAFF_HEIGHT/2+self.position[1])),(int(STAFF_HEIGHT/2+SIGN_STAFF_LENGTH+m*STAFF_LENGTH/MEASURES_PER+self.position[0]),int(3*STAFF_HEIGHT/2+self.position[1])))
+            pygame.draw.line(self.screen,INK_COLOR,(int(STAFF_HEIGHT/2+SIGN_STAFF_LENGTH+m*STAFF_LENGTH/MEASURES_PER+self.position[0]),STAFF_HEIGHT+self.position[1]),(int(STAFF_HEIGHT/2+SIGN_STAFF_LENGTH+m*STAFF_LENGTH/MEASURES_PER+self.position[0]),2*STAFF_HEIGHT+self.position[1]))
         # Draw the clef at the front of each staff.  The C-clef can reach half the staff height below the staff.
-        self.screen.blit(pygame.transform.scale(CLEF_DICT[self.clef],(STAFF_HEIGHT,int(1.5*STAFF_HEIGHT))),(int(STAFF_HEIGHT/2+self.position[0]),int(STAFF_HEIGHT/2+self.position[1])))
+        self.screen.blit(pygame.transform.scale(CLEF_DICT[self.clef],(STAFF_HEIGHT,int(1.5*STAFF_HEIGHT))),(int(STAFF_HEIGHT/2+self.position[0]),STAFF_HEIGHT+self.position[1]))
         # Draw the time signature immediately following the clef.
-        self.screen.blit(pygame.transform.scale(TIME_DICT[self.timename],(STAFF_HEIGHT,STAFF_HEIGHT)),(int(3*STAFF_HEIGHT/2+self.position[0]),int(STAFF_HEIGHT/2+self.position[1])))
+        self.screen.blit(pygame.transform.scale(TIME_DICT[self.timename],(STAFF_HEIGHT,STAFF_HEIGHT)),(int(3*STAFF_HEIGHT/2+self.position[0]),STAFF_HEIGHT+self.position[1]))
         # Draw the notes, or at least, their heads, stems, and special marks, as these can be done independently.
         for eachnote in self.notes:
             eachnote.generate_image()
@@ -420,6 +434,7 @@ class Staff():
         ## There is no clear pattern to these curves, however; they are not always a translation of the curved
         ## line that would pass through the noteheads, for example, so for this program beams remain straight.
         ########################################################################################################
+        # This sub-method beams the set of notes on one beat in one staff.
         def beam(noteset):
             # Look at the d-notes and p-notes separately.  If there is only one, it should flag itself.
             if len(noteset) == 1:
@@ -435,20 +450,32 @@ class Staff():
                     right_note.tip_position = (right_note.tip_position[0],int(noteset[0].tip_position[1]+slope*(right_note.tip_position[0]-noteset[0].tip_position[0])))
                     if left_note.duration < 0.125:
                         if right_note.duration < 0.125:
-                            pygame.draw.line(self.screen,INK_COLOR,(left_note.tip_position[0],left_note.tip_position[1]+4*NOTE_LINE),(right_note.tip_position[0],right_note.tip_position[1]+4*NOTE_LINE),2*NOTE_LINE)
+                            if left_note.orientation:
+                                pygame.draw.line(self.screen,INK_COLOR,(left_note.tip_position[0],left_note.tip_position[1]+4*NOTE_LINE),(right_note.tip_position[0],right_note.tip_position[1]+4*NOTE_LINE),2*NOTE_LINE)
+                            else:
+                                pygame.draw.line(self.screen,INK_COLOR,(left_note.tip_position[0],left_note.tip_position[1]-4*NOTE_LINE),(right_note.tip_position[0],right_note.tip_position[1]-4*NOTE_LINE),2*NOTE_LINE)
                         else:
                             xchange = (right_note.tip_position[0] - left_note.tip_position[0]) // 2
-                            pygame.draw.line(self.screen,INK_COLOR,(left_note.tip_position[0],left_note.tip_position[1]+4*NOTE_LINE),(left_note.tip_position[0]+xchange,int(left_note.tip_position[1]+slope*xchange+4*NOTE_LINE)),2*NOTE_LINE)
+                            if left_note.orientation:
+                                pygame.draw.line(self.screen,INK_COLOR,(left_note.tip_position[0],left_note.tip_position[1]+4*NOTE_LINE),(left_note.tip_position[0]+xchange,int(left_note.tip_position[1]+slope*xchange+4*NOTE_LINE)),2*NOTE_LINE)
+                            else:
+                                pygame.draw.line(self.screen,INK_COLOR,(left_note.tip_position[0],left_note.tip_position[1]-4*NOTE_LINE),(left_note.tip_position[0]+xchange,int(left_note.tip_position[1]+slope*xchange-4*NOTE_LINE)),2*NOTE_LINE)
                     elif right_note.duration < 0.125 and everypair == len(noteset) - 2:
                         xchange = (right_note.tip_position[0] - left_note.tip_position[0]) // 3
-                        pygame.draw.line(self.screen,INK_COLOR,(right_note.tip_position[0],right_note.tip_position[1]+4*NOTE_LINE),(right_note.tip_position[0]+xchange//2,int(right_note.tip_position[1]+slope*xchange/2+4*NOTE_LINE)),2*NOTE_LINE)
-                        pygame.draw.line(self.screen,INK_COLOR,(right_note.tip_position[0],right_note.tip_position[1]),(right_note.tip_position[0]+xchange//2,int(right_note.tip_position[1]+slope*xchange/2)),2*NOTE_LINE)
+                        if right_note.orientation:
+                            pygame.draw.line(self.screen,INK_COLOR,(right_note.tip_position[0],right_note.tip_position[1]+4*NOTE_LINE),(right_note.tip_position[0]+xchange//2,int(right_note.tip_position[1]+slope*xchange/2+4*NOTE_LINE)),2*NOTE_LINE)
+                            pygame.draw.line(self.screen,INK_COLOR,(right_note.tip_position[0],right_note.tip_position[1]),(right_note.tip_position[0]+xchange//2,int(right_note.tip_position[1]+slope*xchange/2)),2*NOTE_LINE)
+                        else:
+                            pygame.draw.line(self.screen,INK_COLOR,(right_note.tip_position[0],right_note.tip_position[1]-4*NOTE_LINE),(right_note.tip_position[0]+xchange//2,int(right_note.tip_position[1]+slope*xchange/2-4*NOTE_LINE)),2*NOTE_LINE)
+                            pygame.draw.line(self.screen,INK_COLOR,(right_note.tip_position[0],right_note.tip_position[1]),(right_note.tip_position[0]+xchange//2,int(right_note.tip_position[1]+slope*xchange/2)),2*NOTE_LINE)
+                        
+        # Iterate through notes.
         beat = 0
         shared_upper_notes = []
         shared_lower_notes = []
         itsbeat = 0
         for eachnote in range(len(self.notes)):
-            # Go through notes, beat by beat, ignoring all without flags.
+            # Go through notes, beat by beat, ignoring all quarter notes and above.
             if self.notes[eachnote].duration < 0.25:
                 itsbeat = self.time_a_note(self.notes[eachnote]) // 1
                 if itsbeat > beat:
@@ -466,31 +493,35 @@ class Staff():
         for noteset in [shared_lower_notes,shared_upper_notes]:
             beam(noteset)
 
+    # This method is called to set the clef on a staff.
     def change_clef(self,clef):
         self.clef = clef
         self.generate_image()
     
+    # This method is called to set the time signature on a staff.
     def change_time(self,time):
         self.timename = time 
         self.timesig = TIME_TUPLE_DICT[time]
         self.generate_image()
     
+    # This note determines on what beat in a staff a note appears,
+    # e.g., an eighth note at the end of the second measure of 3/4 time
+    # is at beat 6.5
     def time_a_note(self,note):
         return note.time[0]*self.timesig[0] + note.time[1]
 
+    # This method is how a staff responds to being clicked, in the loop
+    # after clef and time signature have been set.
     def feel_click(self,mousepos,selected_function):
+        # Where in the staff's rectangle it was clicked.
         relpos = (mousepos[0]-self.position[0],mousepos[1]-self.position[1])
-        if relpos[0] < 1.5*STAFF_HEIGHT:
-            self.change_clef()
-            return False
-        elif relpos[0] < 2.5*STAFF_HEIGHT:
-            pass # Change time signature here.
-        else:
+        if relpos[0] > 2.5*STAFF_HEIGHT: # Only matters if clicked in music part.
+            # If a note is clicked on, it gets priority.
             for eachnote in self.notes:
                 if eachnote.rect.collidepoint(mousepos):
                     eachnote.feel_click(selected_function)
                     self.generate_image()
-                    return False
+                    return False # Only one note responds to click.
             if selected_function in NOTE_TIME_DICT:
                 # Algorithm for when a staff is clicked on with the note placement tool.
                 # First, find the time of the note.
@@ -498,25 +529,25 @@ class Staff():
                 distalong = relpos[0] - 2.5*STAFF_HEIGHT
                 measure = 1 + distalong // (STAFF_LENGTH/MEASURES_PER)
                 beatinown = 1 + (distalong - (measure-1)*STAFF_LENGTH/MEASURES_PER) // (duration*STAFF_LENGTH*self.timesig[1]/(MEASURES_PER*self.timesig[0]))
-                # For example, the eighth note in the seventh eighth of a measure has a 'beatinown' of 7.
+                # For example, the fifth consecutive eighth note in a measure has a 'beatinown' of 5.
+                # Notes can only appear in such a portion in their measure, for example, a half
+                # note does not start right after a dotted quarter note.
                 while duration*beatinown > self.timesig[0]/self.timesig[1]:
-                    duration *= 0.5
+                    duration *= 0.5 # Note size adjusted to fit certain notes.
                     beatinown = 1 + 2*(beatinown-1)
                 time = (measure,(beatinown-1)*4*duration+1)
                 # Second, the pitch of the note.
-                stepsdown = (relpos[1] - 5*STAFF_HEIGHT/16) // (STAFF_HEIGHT/8)
+                stepsdown = (relpos[1] - 15*STAFF_HEIGHT/16) // (STAFF_HEIGHT/8)
                 toprung = CLEF_NOTE_DICT[self.clef]
                 notename = {0:'c',1:'d',2:'e',3:'f',4:'g',5:'a',6:'b'}[(toprung-stepsdown) % 7]
                 noteoctave = (toprung-stepsdown) // 7
                 newnote = Note(self,time,duration,notename+str(noteoctave))
                 newnote.set_position()
-                #newnote.generate_image(screen)
                 self.notes.append(newnote)
                 self.notes.sort(key=self.time_a_note)
                 self.generate_image()
 
-# Main function
-
+# The 'main' function, the part of the program that runs.
 def main():
     # Initialize display window
     screen = pygame.display.set_mode(pygame.Rect((0,0,WINDOW_DIM[0],WINDOW_DIM[1])).size)
@@ -527,12 +558,21 @@ def main():
     buttons = pygame.sprite.Group()
     clefbutton = pybutton(UPPER_CLEF_DICT,(BUFFER,BUTTON_RECT.top+BUFFER))
     timebutton = pybutton(TIME_DICT,(2*BUFFER+BUTTON_DIM[0],BUTTON_RECT.top+BUFFER))
+    ######################################################################################
+    ## Many of the differences observed between de la Guerre's notation and today's,
+    ## can be observed in the game by both the player and by de la Guerre herself,
+    ## who comments with one when the player asks her for help.  Her comments, however,
+    ## are made from the opposite perspective; it is contemporary notation which is
+    ## less familiar to her.
+    ######################################################################################
     pybutton(ACCI_DICT,(3*BUFFER+2*BUTTON_DIM[0],BUTTON_RECT.top+BUFFER),'''
-    If you wish to raise or lower a note by a half step, select the button with a sharp/flat in the “toolbox”, if that is what you call it.''',buttons)
+    If you wish to raise or lower a note by a half step, select the button with a sharp/flat in the “toolbox”, 
+    if that is what you call it.''',buttons)
     pybutton(NOTE_PICT_DICT,(4*BUFFER+3*BUTTON_DIM[0],BUTTON_RECT.top+BUFFER),'''
     Something something note durations''',buttons)
     pybutton(INVERTER_DICT,(5*BUFFER+4*BUTTON_DIM[0],BUTTON_RECT.top+BUFFER),'''
-    Here is a place to go when you wish to flip the tail of your note. While I always make my notes shaped like ‘d’ and ‘q’,
+    Here is a place to go when you wish to flip the tail of your note. While I always make my notes 
+    shaped like ‘d’ and ‘q’,
     it has become apparent to moi that the ‘q’ is now a ‘p’. Tres bizarre.''',buttons)
     pybutton(ERASER_DICT,(6*BUFFER+5*BUTTON_DIM[0],BUTTON_RECT.top+BUFFER),'''
     This is a, how you say, erase button? It looks like a penknife because, back in my day,
@@ -541,11 +581,12 @@ def main():
     pybutton(DOT_DICT,(7*BUFFER+6*BUTTON_DIM[0],BUTTON_RECT.top+BUFFER),'''
     To extend a note by half its length, use this funny-looking dot.''',buttons)
     pybutton(AGREMENT_DICT,(8*BUFFER+7*BUTTON_DIM[0],BUTTON_RECT.top+BUFFER),'''
-    Les agréments are most important if you wish to give more feeling to the piece. Please, for my sake, give your musique some more flavor by pressing this button
+    Les agréments are most important if you wish to give more feeling to the piece. 
+    Please, for my sake, give your musique some more flavor by pressing this button
     and clicking on your notes.''',buttons)
     playbutton = pybutton(PLAY_DICT,(WINDOW_DIM[0]-CHAT_WIDTH-BUFFER,BUTTON_RECT.top+BUFFER),'''
     Something about the harpischord for the play button.''')
-    #PLAY_RECT = pygame.Rect(CHAT_RECT.left+BUFFER,CHAT_RECT.bottom+BUFFER,CHAT_WIDTH-2*BUFFER,BUTTON_DIM[1])
+    # Play button needs extra work to make it bigger.
     playbutton.rect.width = CHAT_WIDTH-2*BUFFER
     playbutton.rect.left = CHAT_RECT.left + BUFFER
     playbutton.image = pygame.Surface((CHAT_WIDTH-2*BUFFER,BUTTON_DIM[1]))
@@ -558,10 +599,17 @@ def main():
 
     # Draw Elisabeth
     screen.blit(lispic,(CHAT_RECT.left,0))
+    # The parle() method places text (a long string in the 'mots' argument) under the portrait.
     def parle(screen,mots):
         pygame.draw.rect(screen,PAPER_COLOR,CHAT_RECT)
         bliterate(screen,mots,CHAT_RECT.left,LIS_HEIGHT,CHAT_WIDTH,outerbuffer=10,buffer=5)
         pygame.display.update()
+    # The wait_press() waits for the player to click on something or press a key;
+    # if the player clicks on the 'x' button; it returns -1.  The syntax:
+    # if wait_press() == -1:
+    #   return
+    # will allow the game to proceed as one expects, with the 'x' button working
+    # and the game waiting for the player's move.
     def wait_press():
         while True:
             for e in pygame.event.get():
@@ -574,7 +622,7 @@ def main():
     pygame.draw.rect(screen,PAPER_COLOR,PAPER_RECT)
     staves = []
     for s in range(SYSTEMS*STAVES_PER):
-        staves.append(Staff(screen,(int(STAFF_HEIGHT/2),int((6*s+1.5)*STAFF_HEIGHT/2)),s))
+        staves.append(Staff(screen,(int(STAFF_HEIGHT/2),int((6*s+0.5)*STAFF_HEIGHT/2)),s))
     for eachstaff in range(len(staves)):
         if eachstaff % STAVES_PER != 0:
             staves[eachstaff].change_clef("bass")
@@ -585,6 +633,8 @@ def main():
 
     selected_function = 'select'
 
+    # The redraw_staff_paper() blanks the staff area and redraws every staff and note.
+    # Useful for when some part of a note is not erased because it strayed outside its staff.
     def redraw_staff_paper():
         pygame.draw.rect(screen,PAPER_COLOR,(int(STAFF_HEIGHT/2),int(STAFF_HEIGHT/2),PAGEDIM[0],PAGEDIM[1]))
         for eachstaff in staves:
@@ -632,38 +682,45 @@ def main():
         return agrements
     
     # The real game begins here!
+    #########################################################################################
+    ## Three things were considered in writing the dialogue for the character of Elisabeth
+    ## Jean-Claude Jacquet de la Guerre.  Firstly, according to Cessac's biography, she was
+    ## born and died in Paris, France, and composed vocal music in French and occasionally
+    ## Italian and Latin; there is little evidence of her having spoken English, the native
+    ## language of the game's intended audience; as such, her character speaks in English with
+    ## occasional French words, in the style called "Poirot Speak"
     speech = '''Bonjour!  Je m'appelle Elisabeth Jean-Claude Jacquet de la Guerre.
     One of my favorite pastimes is to compose a beautiful harpsichord suite on a piece of parchment such as this.
     Care to join me, mon amis?
     \n\n
     [Press any key to continue.]'''
-    parle(screen,speech) # Put her words up and wait for a keypress or mouse click.
-    if wait_press() == -1:
-        return
+    #parle(screen,speech) # Put her words up and wait for a keypress or mouse click.
+    #if wait_press() == -1:
+    #    return
     speech = '''Incroyable!  First, let us commence with the time signature.
     Find a rhythm that suits you and choose what you must.
     \n\n
     [Press the time signature button to browse time signatures.
     Click the staff paper to apply one.]'''
-    parle(screen,speech)
-    timebutton.selectable = True # Let player click on the time signature button to scroll
-    while timebutton.selectable: # through the time signatures available, then apply it
-        for e in pygame.event.get(): # the moment staff paper is clicked.
-            if e.type == pygame.QUIT:
-                return
-            elif e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
-                return
-            elif e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
-                if timebutton.rect.collidepoint(e.pos):
-                    timebutton.feel_click()
-                    screen.blit(timebutton.image,timebutton.rect)
-                    pygame.display.update()
-                elif PAPER_RECT.collidepoint(e.pos):
-                    for s in range(SYSTEMS*STAVES_PER):
-                        staves[s].change_time(timebutton.statuslist[timebutton.status])
-                    timebutton.grey() # After time signature is chosen, player cannot change it.
-                    screen.blit(timebutton.image,timebutton.rect) # What would that do to all the notes?
-                    timebutton.selectable = False
+    #parle(screen,speech)
+    #timebutton.selectable = True # Let player click on the time signature button to scroll
+    #while timebutton.selectable: # through the time signatures available, then apply it
+    #    for e in pygame.event.get(): # the moment staff paper is clicked.
+    #        if e.type == pygame.QUIT:
+    #            return
+    #        elif e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
+    #            return
+    #        elif e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+    #            if timebutton.rect.collidepoint(e.pos):
+    #                timebutton.feel_click()
+    #                screen.blit(timebutton.image,timebutton.rect)
+    #                pygame.display.update()
+    #            elif PAPER_RECT.collidepoint(e.pos):
+    #                for s in range(SYSTEMS*STAVES_PER):
+    #                    staves[s].change_time(timebutton.statuslist[timebutton.status])
+    #                timebutton.grey() # After time signature is chosen, player cannot change it.
+    #                screen.blit(timebutton.image,timebutton.rect) # What would that do to all the notes?
+    #                timebutton.selectable = False
     speech = '''Change or add a clef in your piece with this tool here.
     Unfortunately, to accommodate to your perverted modern ways of notation,
     I have made my C-clef shaped in a more wavy and less rigid manner.”
@@ -693,16 +750,16 @@ def main():
     Then, let the artiste in you choose where in the piece to place it.
     \n\n
     [Press any key to continue.]'''
-    parle(screen,speech) # Player must go through two dialogues before playing.
-    if wait_press() == -1:
-        return 
-    speech = '''Once your composition is finished, push the play button on the bottom right of the parchment and let la musique play.
-    After it has played, you may resume editing the piece if you wish.  Worry not about how magnifique it sounds, but just know that I will be silently judging.
-    \n\n
-    [Press any key to continue.]'''
-    parle(screen,speech)
-    if wait_press() == -1:
-        return # Last message remains up.
+    #parle(screen,speech) # Player must go through two dialogues before playing.
+    #if wait_press() == -1:
+    #    return 
+    #speech = '''Once your composition is finished, push the play button on the bottom right of the parchment and let la musique play.
+    #After it has played, you may resume editing the piece if you wish.  Worry not about how magnifique it sounds, but just know that I will be silently judging.
+    #\n\n
+    #[Press any key to continue.]'''
+    #parle(screen,speech)
+    #if wait_press() == -1:
+    #    return # Last message remains up.
     parle(screen,"Alright, mes amis, if you need any more instruction, just click on my beautiful visage.")
 
     for eachbutton in buttons:
