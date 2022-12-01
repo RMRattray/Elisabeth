@@ -19,6 +19,8 @@
 # This Python project makes use of the built-in math and os modules for file access
 # and graphics, pygame (including the Sprite library) for its interface, and the
 # midiutil library for the output of MIDI files.
+from os import environ
+environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 import math
 import pygame
 from pygame import sprite
@@ -26,10 +28,11 @@ pygame.init()
 pygame.mixer.init()
 pygame.mixer.music.set_volume(1.0)
 import os
+import random
 from midiutil import MIDIFile
 
 # The following lines determine the dimensions of various on-screen objects in pixels.
-WINDOW_DIM = (1300,800) # Entire game window (width, height)
+WINDOW_DIM = (1200,750) # Entire game window (width, height)
 BUTTON_DIM = (60,80) # Buttons along the bottom of the screen
 BUFFER = 10 # Buffer between buttons and the edges of the screen
 BUTTON_RECT = pygame.Rect(0,WINDOW_DIM[1]-BUTTON_DIM[1]-2*BUFFER,WINDOW_DIM[0],BUTTON_DIM[1]+BUFFER*2)
@@ -40,7 +43,6 @@ SYSTEMS = 3 # The number of systems, or grand staves, of music in the window
 STAVES_PER = 2 # The number of staves in each grand staff
 MEASURES_PER = 4 # The number of measures each staff is across.
 STAFF_HEIGHT = int(PAPER_RECT.height/(3*SYSTEMS*STAVES_PER+1))
-print(STAFF_HEIGHT)
 # STAFF_HEIGHT is the distance between the highest and lowest non-ledger line in a staff
 STAFF_LENGTH = PAPER_RECT.width - 4*STAFF_HEIGHT # The length of the paper of the staff with notes
 SIGN_STAFF_LENGTH = 2*STAFF_HEIGHT # The part of the staff reserved for clef and time signature
@@ -135,7 +137,13 @@ NOTE_PICT_DICT = {"whole":get_asset("whole.png"),"half":get_asset("half.png"),"q
 ERASER_DICT = {"eraser":get_asset("Knife.png")}
 INVERTER_DICT = {"inverse":get_asset("inverse.png")}
 DOT_DICT = {"dot":get_asset("1,5.png")}
-AGREMENT_DICT = {"agrement1":get_asset("1,5.png")}
+AGREMENT_DICT = {"pince":get_asset("pince.png"),"tremblement":get_asset("tremblement.png"),
+    "appuye":get_asset("tremblement_appuye.png"),
+    "portdevoix":get_asset("portdevoix.png"),"double":get_asset("double.png"),
+    "cadence":get_asset("cadence.png"),"mordent":get_asset("mordent.png")}
+AGREMENT_DONE_DICT = {}
+for K in AGREMENT_DICT:
+    AGREMENT_DONE_DICT[K] = False
 PLAY_DICT = {"play":pygame.transform.scale(get_asset("play.png"),(CHAT_WIDTH,BUTTON_DIM[1]))}
 lispic = get_asset("Elisabeth.jpg")
 LIS_HEIGHT = int(CHAT_WIDTH*lispic.get_height()/lispic.get_width())
@@ -313,16 +321,13 @@ class Note():
             mark = pygame.transform.scale(AGREMENT_DICT[self.agrement],(int(STAFF_HEIGHT/3),int(STAFF_HEIGHT/3)))
             self.staff.screen.blit(mark,(int(centerx-STAFF_HEIGHT/6),int(self.position[1]-STAFF_HEIGHT/3)))
         # Draw ledger lines (if necessary)
-        print(self.rung,CLEF_NOTE_DICT[self.staff.clef],self.pitch)
         if self.rung > CLEF_NOTE_DICT[self.staff.clef]:
             for l in range((self.rung - CLEF_NOTE_DICT[self.staff.clef]) // 2):
                 y = int(self.staff.position[1]+STAFF_HEIGHT-(l+1)*STAFF_HEIGHT/4)
-                print(l,y,self.staff.position[1])
                 pygame.draw.line(self.staff.screen,INK_COLOR,(int(centerx-STAFF_HEIGHT/6),y),(int(centerx+STAFF_HEIGHT/6),y))
         elif self.rung < CLEF_NOTE_DICT[self.staff.clef] - 8:
             for l in range((CLEF_NOTE_DICT[self.staff.clef] - 8 - self.rung) // 2):
                 y = int(self.staff.position[1]+2*STAFF_HEIGHT+(l+1)*STAFF_HEIGHT/4)
-                print(l,y,self.staff.position[1])
                 pygame.draw.line(self.staff.screen,INK_COLOR,(int(centerx-STAFF_HEIGHT/6),y),(int(centerx+STAFF_HEIGHT/6),y))
 
     # This method draws an eighth note or sixteenth note's flag/tail.
@@ -381,7 +386,14 @@ class Note():
                 self.generate_image()
         # Agrement function causes agrement marks to appear.
         elif selected_function in AGREMENT_DICT:
+            AGREMENT_DONE_DICT[selected_function] = True
             self.agrement = selected_function
+            if selected_function in ['cadence','appuye'] and self.duration * 32 % 3 != 0:
+                self.duration *= 1.5
+                self.rect.width = int(self.rect.width*1.5)
+            elif selected_function == 'tremblement' and self.duration * 32 % 3 == 0:
+                self.duration *= 2/3
+                self.rect.width = int(self.rect.width*2/3)
             self.generate_image()
 
 # This class - staff - includes a list of the Note objects that are the notes appearing on it,
@@ -670,15 +682,93 @@ def main():
         outputMIDI.addTempo(0,0,120) # The arguments here are track, time in beats when track begins, and tempo.
         outputMIDI.addProgramChange(0,0,0,6) # Changes instrument to harpsichord (first three args are track, channel, time)
         # Note that a harpsichord is 7 is standard MIDI's 1-origin list, but 6 in the library's 0-origin list.
+        # These allow for agrements on multiple notes.
+        previousnote = ''
+        previoushaddouble = False
         for eachstaff in staves:
             for eachnote in eachstaff.notes:
+                ###############################################################################
+                ## The way the game interprets agrements is determined from numerous sources.
+                ## Most pertinent to Jacquet's own work are the pince (simple trill), tremblement (long trill),
+                ## double, and port de voix, which are defined from Norton.
+                ##
+                ## d'Anglebert being her closest relation, his table is used to define cadence
+                ## and the tremblement appuye.  Mordent also appears in his table, Hashimoto gives
+                ## tips for defining.  He also says about trills... choose what I do about trills.
+                ###############################################################################
+                if previoushaddouble and previousnote != '':
+                    outputMIDI.addNote(0,0,eachnote.midi_pitch(),BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(previousnote[1]),previousnote[1].midi_duration()/4,100)
+                    outputMIDI.addNote(0,0,previousnote[1].midi_pitch(),BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(previousnote[1])+previousnote[1].midi_duration()/4,previousnote[1].midi_duration()/4,100)
+                    outputMIDI.addNote(0,0,previousnote[0].midi_pitch(),BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(previousnote[1])+previousnote[1].midi_duration()/2,previousnote[1].midi_duration()/4,100)
+                    outputMIDI.addNote(0,0,previousnote[1].midi_pitch(),BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(previousnote[1])+3*previousnote[1].midi_duration()/4,previousnote[1].midi_duration()/4,100)
+                    previoushaddouble = False
+                # No agrement - normal note!
                 if eachnote.agrement == '': # The arguments are track, channel (as in both, left, or right), pitch, time, duration, and volume
                     outputMIDI.addNote(0,0,eachnote.midi_pitch(),BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote),eachnote.midi_duration(),100)
                 else:
                     agrements = True # Add code for agréments here!
-        with open("output.mid","wb") as output_file:
+                    if eachnote.agrement == 'pince':
+                        outputMIDI.addNote(0,0,eachnote.midi_pitch(),BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote),eachnote.midi_duration()/4,100)
+                        if eachnote.midi_pitch() % 12 in [2,4,7,9,11]:
+                            outputMIDI.addNote(0,0,eachnote.midi_pitch()-2,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+eachnote.midi_duration()/4,eachnote.midi_duration()/4,100)
+                        else:
+                            outputMIDI.addNote(0,0,eachnote.midi_pitch()-1,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+eachnote.midi_duration()/4,eachnote.midi_duration()/4,100)
+                        outputMIDI.addNote(0,0,eachnote.midi_pitch(),BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+eachnote.midi_duration()/2,eachnote.midi_duration()/2,100)
+                    elif eachnote.agrement == 'tremblement':
+                        d = eachnote.midi_duration()/8
+                        p = eachnote.midi_pitch()
+                        if p % 12 in [2,4,7,9,11]:
+                            m = p - 2
+                        else:
+                            m = p - 1
+                        for i in range(4):
+                            outputMIDI.addNote(0,0,p,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d,d,100)
+                            outputMIDI.addNote(0,0,m,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d+d,d,100)
+                    elif eachnote.agrement == 'appuye':
+                        d = eachnote.midi_duration()/12
+                        p = eachnote.midi_pitch()
+                        if p % 12 in [2,4,7,9,11]:
+                            m = p - 2
+                        else:
+                            m = p - 1
+                        outputMIDI.addNote(0,0,p,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote),d*3,100)
+                        outputMIDI.addNote(0,0,m,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+d*3,d,100)
+                        for i in range(2,6):
+                            outputMIDI.addNote(0,0,p,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d,d,100)
+                            outputMIDI.addNote(0,0,m,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d+d,d,100)
+                    elif eachnote.agrement == 'portdevoix':
+                        outputMIDI.addNote(0,0,previousnote.midi_pitch(),BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote),eachnote.midi_duration()/2,100)
+                        outputMIDI.addNote(0,0,eachnote.midi_pitch(),BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+eachnote.midi_duration()/2,eachnote.midi_duration()/2,100)
+                    elif eachnote.agrement == 'mordent':
+                        outputMIDI.addNote(0,0,eachnote.midi_pitch(),BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)-1/16,1/32,100)
+                        outputMIDI.addNote(0,0,eachnote.midi_pitch()-1,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)-1/32,1/32,100)
+                        outputMIDI.addNote(0,0,eachnote.midi_pitch(),BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote),eachnote.midi_duration(),100)
+                    elif eachnote.agrement == 'cadence':
+                        d = eachnote.midi_duration()/12
+                        p = eachnote.midi_pitch()
+                        if p % 12 in [2,4,7,9,11]:
+                            m = p - 2
+                        else:
+                            m = p - 1
+                        if m % 12 in [2,4,7,9,11]:
+                            b = m - 2
+                        else:
+                            b = m - 1
+                        outputMIDI.addNote(0,0,p,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote),d,100)
+                        outputMIDI.addNote(0,0,b,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*d,d,100)
+                        for i in range(6):
+                            outputMIDI.addNote(0,0,m,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d+d,d,100)
+                        for i in range(2,6):
+                            outputMIDI.addNote(0,0,p,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d,d,100)
+                if eachnote.agrement == 'double':
+                    previoushaddouble = True
+                    previousnote = [previousnote,eachnote]
+                else:
+                    previousnote = eachnote
+        filename = f"Harpischord in {previousnote.pitch[0].upper()}, No. {int(random.random()*100)}.mid"
+        with open(filename,"wb") as output_file:
             outputMIDI.writeFile(output_file)
-        os.startfile("output.mid")
+        os.startfile(filename)
         return agrements
     
     # The real game begins here!
@@ -694,33 +784,33 @@ def main():
     Care to join me, mon amis?
     \n\n
     [Press any key to continue.]'''
-    #parle(screen,speech) # Put her words up and wait for a keypress or mouse click.
-    #if wait_press() == -1:
-    #    return
+    parle(screen,speech) # Put her words up and wait for a keypress or mouse click.
+    if wait_press() == -1:
+        return
     speech = '''Incroyable!  First, let us commence with the time signature.
     Find a rhythm that suits you and choose what you must.
     \n\n
     [Press the time signature button to browse time signatures.
     Click the staff paper to apply one.]'''
-    #parle(screen,speech)
-    #timebutton.selectable = True # Let player click on the time signature button to scroll
-    #while timebutton.selectable: # through the time signatures available, then apply it
-    #    for e in pygame.event.get(): # the moment staff paper is clicked.
-    #        if e.type == pygame.QUIT:
-    #            return
-    #        elif e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
-    #            return
-    #        elif e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
-    #            if timebutton.rect.collidepoint(e.pos):
-    #                timebutton.feel_click()
-    #                screen.blit(timebutton.image,timebutton.rect)
-    #                pygame.display.update()
-    #            elif PAPER_RECT.collidepoint(e.pos):
-    #                for s in range(SYSTEMS*STAVES_PER):
-    #                    staves[s].change_time(timebutton.statuslist[timebutton.status])
-    #                timebutton.grey() # After time signature is chosen, player cannot change it.
-    #                screen.blit(timebutton.image,timebutton.rect) # What would that do to all the notes?
-    #                timebutton.selectable = False
+    parle(screen,speech)
+    timebutton.selectable = True # Let player click on the time signature button to scroll
+    while timebutton.selectable: # through the time signatures available, then apply it
+        for e in pygame.event.get(): # the moment staff paper is clicked.
+            if e.type == pygame.QUIT:
+                return
+            elif e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
+                return
+            elif e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                if timebutton.rect.collidepoint(e.pos):
+                    timebutton.feel_click()
+                    screen.blit(timebutton.image,timebutton.rect)
+                    pygame.display.update()
+                elif PAPER_RECT.collidepoint(e.pos):
+                    for s in range(SYSTEMS*STAVES_PER):
+                        staves[s].change_time(timebutton.statuslist[timebutton.status])
+                    timebutton.grey() # After time signature is chosen, player cannot change it.
+                    screen.blit(timebutton.image,timebutton.rect) # What would that do to all the notes?
+                    timebutton.selectable = False
     speech = '''Change or add a clef in your piece with this tool here.
     Unfortunately, to accommodate to your perverted modern ways of notation,
     I have made my C-clef shaped in a more wavy and less rigid manner.”
@@ -750,16 +840,16 @@ def main():
     Then, let the artiste in you choose where in the piece to place it.
     \n\n
     [Press any key to continue.]'''
-    #parle(screen,speech) # Player must go through two dialogues before playing.
-    #if wait_press() == -1:
-    #    return 
-    #speech = '''Once your composition is finished, push the play button on the bottom right of the parchment and let la musique play.
-    #After it has played, you may resume editing the piece if you wish.  Worry not about how magnifique it sounds, but just know that I will be silently judging.
-    #\n\n
-    #[Press any key to continue.]'''
-    #parle(screen,speech)
-    #if wait_press() == -1:
-    #    return # Last message remains up.
+    parle(screen,speech) # Player must go through two dialogues before playing.
+    if wait_press() == -1:
+        return 
+    speech = '''Once your composition is finished, push the play button on the bottom right of the parchment and let la musique play.
+    After it has played, you may resume editing the piece if you wish.  Worry not about how magnifique it sounds, but just know that I will be silently judging.
+    \n\n
+    [Press any key to continue.]'''
+    parle(screen,speech)
+    if wait_press() == -1:
+        return # Last message remains up.
     parle(screen,"Alright, mes amis, if you need any more instruction, just click on my beautiful visage.")
 
     for eachbutton in buttons:
@@ -796,7 +886,6 @@ def main():
                                 eachbutton.unselect()
                         buttons.draw(screen)
                         if playbutton.rect.collidepoint(e.pos):
-                            print("Music should be playing.")
                             if output_music():
                                 speech = '''Magnifique! I had my doubts, however, you have made a Baroque piece to rival even my talents (not really).'''
                             else:
@@ -804,6 +893,9 @@ def main():
                                 Spice it up with some agréments, no?'''
                             parle(screen,speech)
                 elif PAPER_RECT.collidepoint(e.pos):
+                    new_agrement = False
+                    if selected_function in AGREMENT_DONE_DICT and AGREMENT_DONE_DICT[selected_function] == False:
+                        new_agrement = True
                     for eachstaff in staves:
                         if eachstaff.rect.collidepoint(e.pos):
                             eachstaff.feel_click(e.pos,selected_function)
@@ -811,6 +903,33 @@ def main():
                                 redraw_staff_paper()
                             elif selected_function in ["eighth","sixteenth"]:
                                 eachstaff.generate_image()
+                    if new_agrement and AGREMENT_DONE_DICT[selected_function]:
+                        if selected_function == 'pince':
+                            speech = "Pincé ... just a quaint little trill, is it not?"
+                        elif selected_function == 'tremblement':
+                            speech = "Ah, the tremblement, that is a trill to warm the fingers!"
+                        elif selected_function == 'double':
+                            speech = "The doublé certainly enlivens a scale passage."
+                        elif selected_function == 'portdevoix':
+                            speech = "The port de voix, just an easy simple to draw ... after my time, Rameau would use that symbol for everything."
+                        elif selected_function == 'appuye':
+                            speech = "No trill is stronger than the tremblement appuyé!"
+                        elif selected_function == 'mordent':
+                            speech = "I hope that is an important note, that one you emphasize with the mordent."
+                        elif selected_function == 'cadence':
+                            speech = "My fellow French composer Jean-Henri d'Anglebert liked that tricky trill, the cadence.  It's not too difficult for my fingers, either!"
+                            ################################################################
+                            ## Here Elisabeth's remarks give the player a clue as to what
+                            ## the agréments do, the moment the player first adds one of any given kind.
+                            ## Her remark about Rameau is justified; in:
+                            ##
+                            ##
+                            ##
+                            ## he writes that "French composers generally used signs (the most
+                            ## common being +, which could indicate virtually any kind of
+                            ## ornament)" and cited Rameau.
+                            ################################################################
+                        parle(screen,speech)
                 elif e.pos[0] > CHAT_RECT.left and e.pos[1] < CHAT_RECT.top:
                     # TODO Have her object to being clicked on repeatedly?
                     speech = '''So you’ve come back for more… Listen, s’il vous plaît, and I will provide a few more tips.
