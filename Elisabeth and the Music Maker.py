@@ -9,12 +9,15 @@
 ## the Python code, and comments relevant to the function of the game as it relates
 ## to the Baroque harpsichord practice of Elisabeth Jean-Claude Jacquet de la Guerre.
 ## For ease of reading, comments relating exclusively to the code are presented with
-## a single # symbol, while comments relating to the function are marked with two ##
+## a single # symbol, while comments relating to the research are marked with two ##
 ## symbols.  The # symbol flags everything after it in a line of text as a comment
 ## such that a Python interpreter does not read it; when using a text editor intended
 ## for coding (such as Visual Studio Code, Atom, or Notepad++), this usually causes
 ## the commented code to appear in green so it can be read independently from the 
 ## code by humans.
+
+## Sources are referenced in-text by surname; a bibliography appears at the very
+## bottom of the document.  There are no page breaks for footnotes.
 
 # This Python project makes use of the built-in math and os modules for file access
 # and graphics, pygame (including the Sprite library) for its interface, and the
@@ -127,9 +130,10 @@ def get_asset(assetname):
 CLEF_DICT = {"treble":get_asset("treble.png"),"cclef":get_asset("cclef.png"),"bass":get_asset("bass.png")}
 UPPER_CLEF_DICT = {"treble":get_asset("treble.png"),"cclef":get_asset("cclef.png")}
 CLEF_NOTE_DICT = {'treble':38,'cclef':36,'bass':26}
-TIME_DICT = {"common":get_asset("c.png"),"three":get_asset("three.png"),"six-four":get_asset("six_four.png"),
+TIME_DICT = {"common":get_asset("c.png"),"three":get_asset("three.png"),"cut":get_asset("cut.png"),
+    "six-four":get_asset("six_four.png"),
     "three-two":get_asset("three_two.png")}
-TIME_TUPLE_DICT = {"common":(4,4),"three":(3,4),"six-four":(6,4),"three-two":(3,2)}
+TIME_TUPLE_DICT = {"common":(4,4),"three":(3,4),"cut":(2,4),"six-four":(6,4),"three-two":(3,2)}
 ACCI_DICT = {"sharp":get_asset("sharp.png"),"flat":get_asset("flat.png")}
 NOTE_TIME_DICT = {"whole":1.0,"half":0.5,"quarter":0.25,"eighth":0.125,"sixteenth":0.0625}
 NOTE_PICT_DICT = {"whole":get_asset("whole.png"),"half":get_asset("half.png"),"quarter":get_asset("quarter.png"),
@@ -201,14 +205,12 @@ class pybutton(pygame.sprite.Sprite): # Inherits from Sprite b/c has appearance
 ## This research project was started because of unfamiliarity with the notation
 ## used by Elisabeth Jean-Claude Jacquet de la Guerre in her Suite in A Minor,
 ## so the appearance of notes in the game is based on her manuscript, specifically:
-##
-## Jacquet de la Guerre, Elisabeth.  Pièces de clavecín, livre 1 (Paris:  de Baussen, 1687).
-##
+## as it appears in her first book of clavecin music,
 ## accessed through the Petrucci Music Library.  Another main topic of discussion in this 
 ## project is the difference in technological methods of composition between now and when 
 ## the piece was composed.  The creation of a modern computer program to compose this piece 
 ## is contrasted with the simple, yet nuanced method of manually writing a piece on 
-## parchment, which de la Guerre used in her time. Expectedly, the human element of a 
+## parchment, which Jacquet used in her time. Expectedly, the human element of a 
 ## composition can not be perfectly represented through recreation with a computer 
 ## program, so ambiguously interpretable aspects of the piece are lost in translation.
 ##
@@ -229,7 +231,7 @@ class Note():
         ###########################################################################################
         ## As seen in the third measure of the first "Allemande," and throughout the suite,
         ## accidentals do not carry from note to note, even within the same octave and measure
-        ## (or else de la Guerre is including unusually many courtesy accidentals).
+        ## (or else Jacquet is including unusually many courtesy accidentals).
         ###########################################################################################
         # As such, the variable self.accidental determines whether an accidental appears and is used to
         # find the pitch for the MIDI output all the same.
@@ -239,7 +241,7 @@ class Note():
         ## Also seen throughout the piece are inverted notes with their stems proceeding from their middle,
         ## not the left side.  This change of appearance is reflect in the game.  And though today it is
         ## conventional for notes' orientations to be determined by where they appear in relation to the
-        ## central line of a staff, in Jacquet de la Guerre's pieces it is more often a function of its
+        ## central line of a staff, in Jacquet's pieces it is more often a function of its
         ## voicing (still typical of choral music today), so this orientation is determined by the player.
         ##################################################################################################
     
@@ -248,16 +250,14 @@ class Note():
     
     def set_position(self):
         ##################################################################################################
-        ## In de la Guerre's Prelude, the evidence for what appear to be whole notes not being played as
+        ## In Jacquet's Prelude, the evidence for what appear to be whole notes not being played as
         ## such is that they are not spaced as far apart as quarter notes would be; they are intended to
-        ## be played as arpeggiated chords, according to:
-        ##
-        ## Burkholder, J. Peter and Claude V. Palisca.  “85:  Elisabeth Jean-Claude Jacquet de la Guerre, 
-        ## Suite No. 3 in A Minor.”  In Norton Anthology of Western music, Sixth Edition, Volume One: 
-        ## Ancient to Baroque, 584-98.  New York:  W. W. Norton & Company, 2010.
+        ## be played as arpeggiated chords, according to Burkholder's annotation of her work.  The
+        ## nonmensural Prelude is unlike even the rest of the suite, and is a notoriously difficult
+        ## form to perform, and unique to the French tradition.
         ##
         ## Though of course not every whole note need be as far from its neighbor as sixteen sixteenth notes
-        ## put together would be, de la Guerre was at least familiar with the intuitive idea that longer
+        ## put together would be, Jacquet was at least familiar with the intuitive idea that longer
         ## notes should have more space after them.  As such, it is not unreasonable that this game assume
         ## note be placed in time based on where the player clicks relative to the measure bars, as opposed
         ## to, say, having notes be placed in the order the player clicks them.
@@ -432,15 +432,11 @@ class Staff():
             eachnote.generate_image()
         # Connect stems of eighth notes, sixteeth notes in same beat
         ######################################################################################################
-        ## One thing of interest in de la Guerre's original manuscript, not present in the newer copies, is the
+        ## One thing of interest in Jacquet's original manuscript, not present in the newer copies, is the
         ## way she beams notes.  If a sixteenth note follows a dotted eighth note, sharing a beat, as occurs
         ## in the second measure of the Allemande and throughout, they are beamed together, but while today one
         ## would usually indicate the latter note being a mere sixteeth by a tick towards the eighth, (as in
-        ##
-        ## Jacquet de la Guerre, Elisabeth.  “Troisème suite” in Pièces de clavecin, livre 1, ed. Pierre Gouin
-        ## (Montréal:  Les Éditions Outremontaises, 2022), 26-39.
-        ##
-        ## a more recent edition of the same), in her original manuscript the sixteenth note points its tails
+        ## Gouin's edition of her work), in her original manuscript the sixteenth note points its tails
         ## rightward.  Also of note is that her beams are not always straight as modern ones, especially when
         ## notes on a beat are not purely in ascent or descent; they may curve and stems stick across the beam.
         ## There is no clear pattern to these curves, however; they are not always a translation of the curved
@@ -571,8 +567,8 @@ def main():
     clefbutton = pybutton(UPPER_CLEF_DICT,(BUFFER,BUTTON_RECT.top+BUFFER))
     timebutton = pybutton(TIME_DICT,(2*BUFFER+BUTTON_DIM[0],BUTTON_RECT.top+BUFFER))
     ######################################################################################
-    ## Many of the differences observed between de la Guerre's notation and today's,
-    ## can be observed in the game by both the player and by de la Guerre herself,
+    ## Many of the differences observed between Jacquet's notation and today's,
+    ## can be observed in the game by both the player and by Jacquet herself,
     ## who comments with one when the player asks her for help.  Her comments, however,
     ## are made from the opposite perspective; it is contemporary notation which is
     ## less familiar to her.
@@ -581,7 +577,7 @@ def main():
     If you wish to raise or lower a note by a half step, select the button with a sharp/flat in the “toolbox”, 
     if that is what you call it.''',buttons)
     pybutton(NOTE_PICT_DICT,(4*BUFFER+3*BUTTON_DIM[0],BUTTON_RECT.top+BUFFER),'''
-    Something something note durations''',buttons)
+    Why, there are notes - the crochet, the quaver - they are familiar to you, non?''',buttons)
     pybutton(INVERTER_DICT,(5*BUFFER+4*BUTTON_DIM[0],BUTTON_RECT.top+BUFFER),'''
     Here is a place to go when you wish to flip the tail of your note. While I always make my notes 
     shaped like ‘d’ and ‘q’,
@@ -597,7 +593,8 @@ def main():
     Please, for my sake, give your musique some more flavor by pressing this button
     and clicking on your notes.''',buttons)
     playbutton = pybutton(PLAY_DICT,(WINDOW_DIM[0]-CHAT_WIDTH-BUFFER,BUTTON_RECT.top+BUFFER),'''
-    Something about the harpischord for the play button.''')
+    That is a harpischord - it is like a pianoforte, expect you cannot play piano or forte.
+    Click on it when you are ready for me to play your piece.''')
     # Play button needs extra work to make it bigger.
     playbutton.rect.width = CHAT_WIDTH-2*BUFFER
     playbutton.rect.left = CHAT_RECT.left + BUFFER
@@ -656,30 +653,29 @@ def main():
     # It also gauges whether the player uses agréments, and returns that Boolean.
     ################################################################################
     ## In producing the game's MIDI output, it was necessary to make assumptions
-    ## about dynamics and tempo, which are not indicated in either edition of de la Guerre's
-    ## scores.  About dynamics, it is stated in
+    ## about dynamics and tempo, which are not indicated in either edition of Jacquet's
+    ## scores.  About dynamics, Moersch states that the harpsichord did not have dynamics
+    ## (this is the namesake of the pianoforte, invented in 1720, nine years before
+    ## Jacquet's death); as such, every note is given the maximum volume.  Regarding tempo,
+    ## Moersch writes that speed was considered impressive, but of course the metronome
+    ## did not yet appear in music, so exact speeds are not known.
+    ## For the purposes of this game, tempo is gleaned from Elisabetta Gugliemin's
+    ## recording of the Suite in A Minor, in which the courante (36 measures of 3/2) lasts 1:48,
+    ## the gigue (50 measures of 3/2) 1:51, and the following chaconne (48 measures of 3/4)
+    ## 3:05, which suggests an average tempo of around two seconds for a whole note.
+    ## This varies, of course, even between the two motions in the same
+    ## time signature, but no pattern is apparent.
     ##
-    ## Moersch, Charlotte Mattax.  “Keyboard Improvisation in the Baroque Period.”
-    ## In Musical Improvisation:  Art, Education, and Society edited by Solis, Gabriel
-    ## and Bruno Nettl, 150-170.  Chicago:  University of Illinois, 2009.
-    ##
-    ## that the harpsichord did not have dynamics (this is the namesake of the pianoforte,
-    ## invented in 1720, nine years before de la Guerre's death); as such, every note is
-    ## given the maximum volume.  Regarding tempo,
-    ###################################################################################
-    # TODO see if any sources describe tempo and if not try to figure it from a recording
-    ##################################################################################
-    ## The most interesting - and most difficult to interpret - feature of de la Guerre's works
-    ## is the agréments.  Though de la Guerre did not publish a guide to interpreting them,
+    ## The most interesting - and even more difficult to interpret - feature of Jacquet's works
+    ## is the agréments.  Though Jacquet did not publish a guide to interpreting them,
     ## other composers, such as d'Anglebert and Couperin, published conflicting guides
     ## at different times.
     ###################################################################################
-    # TODO make dictionary of agréments.
     def output_music():
         agrements = False
         BEATS_PER_STAFF = staves[0].timesig[0]*MEASURES_PER
         outputMIDI = MIDIFile(1) # A one-track MIDI file
-        outputMIDI.addTempo(0,0,120) # The arguments here are track, time in beats when track begins, and tempo.
+        outputMIDI.addTempo(0,0,staves[0].timesig[0]*30) # The arguments here are track, time in beats when track begins, and tempo.
         outputMIDI.addProgramChange(0,0,0,6) # Changes instrument to harpsichord (first three args are track, channel, time)
         # Note that a harpsichord is 7 is standard MIDI's 1-origin list, but 6 in the library's 0-origin list.
         # These allow for agrements on multiple notes.
@@ -688,13 +684,53 @@ def main():
         for eachstaff in staves:
             for eachnote in eachstaff.notes:
                 ###############################################################################
-                ## The way the game interprets agrements is determined from numerous sources.
-                ## Most pertinent to Jacquet's own work are the pince (simple trill), tremblement (long trill),
-                ## double, and port de voix, which are defined from Norton.
+                ## The way the game interprets agréments is determined from numerous sources.
+                ## Most pertinent to Jacquet's own work are the pincé, tremblement (long trill),
+                ## doublé, and port de voix, which are described in Burkholder's annotation to her work.
+                ## The pincé on a note indicates that the performer
+                ## plays it, the note below, and it again, in the span of the note, while
+                ## the tremblement, or long trill, trills between the indicated pitch and the one above for
+                ## length of the note.  This is fairly consistent with other sources' indications
+                ## for this, though Broude suggests that the trill occurs before the note on which it
+                ## applies, and not during.  It should also be noted that the number of trills - or
+                ## repercussions, as Hashimoto's sources translate them - varies, with a case being
+                ## made even for slowing in tempo during trills in vocal music.  However, d'Anglebert
+                ## and Couperin, in harpsichord music, seem content to indicate that precisely
+                ## four be played.  As for the doublé, its function seems to vary,
+                ## but is generally assumed to occur in a note adjacent to two others and involve
+                ## playing it and the others around it twice in a fashion similar to the shape
+                ## of the symbol.  In this game, it is interpreted quite strictly as the next
+                ## note, followed by the preceding, followed by the indicated, then the next, then
+                ## the preceding, each in a quarter of the time of the original indicated note.
+                ## Interpretation of the port de voix (+) is more difficult.
+                ## 
+                ## Reeves writes that the + symbol could indicate virtually any ornament (as it
+                ## seems to throughout editions of Rameau), and Hashimoto assigns various meanings
+                ## to it.  Burkholder, however, demonstrates it as playing the previous note and the
+                ## indicated in the span of the indicates, and d'Anglebert confirms this with
+                ## examples of ascendant and descedant.  D'Anglebert's table also provides a few
+                ## more easily implement agrements to the game, such as the tremblement appuye
+                ## (a special trill on dotted notes), the cadence (a trill which dips down an extra
+                ## step at one point), and the mordent, a preceding trill more like Broude's
+                ## depiction of the pince.
                 ##
-                ## d'Anglebert being her closest relation, his table is used to define cadence
-                ## and the tremblement appuye.  Mordent also appears in his table, Hashimoto gives
-                ## tips for defining.  He also says about trills... choose what I do about trills.
+                ## It should also be noted that, according to Kroll, composers such as Couperin
+                ## would put multiple ornaments on the same note.  Kroll is mystified as to how
+                ## one such combination was intended to be played, the doublé with the tremblement,
+                ## which appear in both orders in Couperin's work.  Kroll concludes that it is
+                ## to begin with a doublé that finishes tremblement, which Panov and Rosanov
+                ## state has long been known to the Baroque performance tradition.
+                ##
+                ## Remarkably, nearly every table of agrements demonstrates them on the note C,
+                ## with every pincé thus involving C and B, and leaving it ambiguous whether
+                ## trills in general are intended to span a semitone or a step in whatever
+                ## scale is in use.  Hashimoto writes that "the question of whether the interval
+                ## between the main note and the lower auxiliary should be a semitone or a whole
+                ## tone ... a great majority of composers left it to the performer's taste and
+                ## judgment."  It may vary by key or by the character of the music.  For simplicity,
+                ## this program elects to play trills always diatonically.  Also for simplicity,
+                ## it does not permit multiple ornaments on the same note, which does not occur
+                ## in Jacquet's first suite anyway.
                 ###############################################################################
                 if previoushaddouble and previousnote != '':
                     outputMIDI.addNote(0,0,eachnote.midi_pitch(),BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(previousnote[1]),previousnote[1].midi_duration()/4,100)
@@ -717,25 +753,25 @@ def main():
                     elif eachnote.agrement == 'tremblement':
                         d = eachnote.midi_duration()/8
                         p = eachnote.midi_pitch()
-                        if p % 12 in [2,4,7,9,11]:
-                            m = p - 2
+                        if p % 12 in [0,2,5,7,9]:
+                            m = p + 2
                         else:
-                            m = p - 1
+                            m = p + 1
                         for i in range(4):
-                            outputMIDI.addNote(0,0,p,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d,d,100)
-                            outputMIDI.addNote(0,0,m,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d+d,d,100)
+                            outputMIDI.addNote(0,0,m,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d,d,100)
+                            outputMIDI.addNote(0,0,p,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d+d,d,100)
                     elif eachnote.agrement == 'appuye':
                         d = eachnote.midi_duration()/12
                         p = eachnote.midi_pitch()
-                        if p % 12 in [2,4,7,9,11]:
-                            m = p - 2
+                        if p % 12 in [0,2,5,7,9]:
+                            m = p + 2
                         else:
-                            m = p - 1
-                        outputMIDI.addNote(0,0,p,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote),d*3,100)
-                        outputMIDI.addNote(0,0,m,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+d*3,d,100)
+                            m = p + 1
+                        outputMIDI.addNote(0,0,m,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote),d*3,100)
+                        outputMIDI.addNote(0,0,p,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+d*3,d,100)
                         for i in range(2,6):
-                            outputMIDI.addNote(0,0,p,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d,d,100)
-                            outputMIDI.addNote(0,0,m,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d+d,d,100)
+                            outputMIDI.addNote(0,0,m,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d,d,100)
+                            outputMIDI.addNote(0,0,p,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d+d,d,100)
                     elif eachnote.agrement == 'portdevoix':
                         outputMIDI.addNote(0,0,previousnote.midi_pitch(),BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote),eachnote.midi_duration()/2,100)
                         outputMIDI.addNote(0,0,eachnote.midi_pitch(),BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+eachnote.midi_duration()/2,eachnote.midi_duration()/2,100)
@@ -746,20 +782,20 @@ def main():
                     elif eachnote.agrement == 'cadence':
                         d = eachnote.midi_duration()/12
                         p = eachnote.midi_pitch()
+                        if p % 12 in [0,2,5,7,9]:
+                            m = p + 2
+                        else:
+                            m = p + 1
                         if p % 12 in [2,4,7,9,11]:
-                            m = p - 2
+                            b = p - 2
                         else:
-                            m = p - 1
-                        if m % 12 in [2,4,7,9,11]:
-                            b = m - 2
-                        else:
-                            b = m - 1
-                        outputMIDI.addNote(0,0,p,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote),d,100)
+                            b = p - 1
+                        outputMIDI.addNote(0,0,m,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote),d,100)
                         outputMIDI.addNote(0,0,b,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*d,d,100)
                         for i in range(6):
-                            outputMIDI.addNote(0,0,m,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d+d,d,100)
+                            outputMIDI.addNote(0,0,p,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d+d,d,100)
                         for i in range(2,6):
-                            outputMIDI.addNote(0,0,p,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d,d,100)
+                            outputMIDI.addNote(0,0,m,BEATS_PER_STAFF*(eachstaff.id//STAVES_PER)+eachstaff.time_a_note(eachnote)+2*i*d,d,100)
                 if eachnote.agrement == 'double':
                     previoushaddouble = True
                     previousnote = [previousnote,eachnote]
@@ -779,19 +815,18 @@ def main():
     ## Italian and Latin; there is little evidence of her having spoken English, the native
     ## language of the game's intended audience; as such, her character speaks in English with
     ## occasional French words, in the style called "Poirot Speak"
+    #########################################################################################
     speech = '''Bonjour!  Je m'appelle Elisabeth Jean-Claude Jacquet de la Guerre.
     One of my favorite pastimes is to compose a beautiful harpsichord suite on a piece of parchment such as this.
-    Care to join me, mon amis?
+    Care to join me, mes amis?
     \n\n
     [Press any key to continue.]'''
     parle(screen,speech) # Put her words up and wait for a keypress or mouse click.
     if wait_press() == -1:
         return
     speech = '''Incroyable!  First, let us commence with the time signature.
-    Find a rhythm that suits you and choose what you must.
-    \n\n
-    [Press the time signature button to browse time signatures.
-    Click the staff paper to apply one.]'''
+    Do you see the 'C' for 'common time'?  Click through the choices.
+    Find a rhythm that suits you and choose what you must.'''
     parle(screen,speech)
     timebutton.selectable = True # Let player click on the time signature button to scroll
     while timebutton.selectable: # through the time signatures available, then apply it
@@ -808,15 +843,29 @@ def main():
                 elif PAPER_RECT.collidepoint(e.pos):
                     for s in range(SYSTEMS*STAVES_PER):
                         staves[s].change_time(timebutton.statuslist[timebutton.status])
+                    #####################################################################
+                    ## She makes comments to the player about the choice of time signature, mentioning
+                    ## the things she has done in that time (in her Suite in A Minor) and assuming
+                    ## player has done the same.  She also takes time to point out the use of the
+                    ## baritone clef and explain the C-clef, which does not resemble a C.
+                    ####################################################################
+                    if timebutton.statuslist[timebutton.status] == 'common':
+                        speech = 'Ah, common time.  Very common dans l\'Allemagne.  Perhaps you are writing an allemande?'
+                    elif timebutton.statuslist[timebutton.status] == 'three':
+                        speech = 'Triple meter, magnifique!  So many possiblilities - la sarabande, la chaconne, le menuet...'
+                    elif timebutton.statuslist[timebutton.status] == 'cut':
+                        speech = 'Cut time - writing a gavotte, perhaps?'
+                    elif timebutton.statuslist[timebutton.status] == 'three-two':
+                        speech = 'Ah, the courante, such a popular dance in my day.'
+                    elif timebutton.statuslist[timebutton.status] == 'six-four':
+                        speech = 'Writing a lively jigue, I see!'
                     timebutton.grey() # After time signature is chosen, player cannot change it.
                     screen.blit(timebutton.image,timebutton.rect) # What would that do to all the notes?
                     timebutton.selectable = False
-    speech = '''Change or add a clef in your piece with this tool here.
-    Unfortunately, to accommodate to your perverted modern ways of notation,
-    I have made my C-clef shaped in a more wavy and less rigid manner.”
-    \n\n
-    [Click the clef button to select an upper clef.
-    Click the staff paper to apply it.]'''
+    speech += '''\n\nChange or add a clef in your piece with this tool here.
+    I always use the baritone clef, but will leave you your choice of the treble
+    or the C-clef, which places middle C on the bottom line of the upper staff.”
+    '''
     parle(screen,speech) # Same process with choosing a C-clef or a G-clef for the upper register.
     clefbutton.selectable = True
     while clefbutton.selectable:
@@ -905,7 +954,7 @@ def main():
                                 eachstaff.generate_image()
                     if new_agrement and AGREMENT_DONE_DICT[selected_function]:
                         if selected_function == 'pince':
-                            speech = "Pincé ... just a quaint little trill, is it not?"
+                            speech = "Pincé ... just a quaint little trill, is it not? Perfect for a penultimate note."
                         elif selected_function == 'tremblement':
                             speech = "Ah, the tremblement, that is a trill to warm the fingers!"
                         elif selected_function == 'double':
@@ -919,26 +968,68 @@ def main():
                         elif selected_function == 'cadence':
                             speech = "My fellow French composer Jean-Henri d'Anglebert liked that tricky trill, the cadence.  It's not too difficult for my fingers, either!"
                             ################################################################
-                            ## Here Elisabeth's remarks give the player a clue as to what
-                            ## the agréments do, the moment the player first adds one of any given kind.
-                            ## Her remark about Rameau is justified; in:
-                            ##
-                            ##
-                            ##
-                            ## he writes that "French composers generally used signs (the most
-                            ## common being +, which could indicate virtually any kind of
-                            ## ornament)" and cited Rameau.
+                            ## Elisabeth's remarks, made the first time the player places
+                            ## any one agrément, give the player a clue as to what
+                            ## the agréments do, as well as their use.  Her note about the use of pincé
+                            ## on a penultimate note is based on Hashimoto's comment on the same;
+                            ## her note about the port de voix, of course, echoes Reeves's
+                            ## observation about Rameau.
                             ################################################################
                         parle(screen,speech)
                 elif e.pos[0] > CHAT_RECT.left and e.pos[1] < CHAT_RECT.top:
-                    # TODO Have her object to being clicked on repeatedly?
-                    speech = '''So you’ve come back for more… Listen, s’il vous plaît, and I will provide a few more tips.
-                    \n\n
-                    [Click on something for an explanation of it.]'''
-                    parle(screen,speech)
-                    selected_function = 'explain'
+                    if selected_function == 'explain':
+                        speech == 'Oui?'
+                        parle(screen,speech)
+                    else:
+                        speech = '''So you’ve come back for more… Listen, s’il vous plaît, and I will provide a few more tips.
+                        \n\n
+                        [Click on something for an explanation of it.]'''
+                        parle(screen,speech)
+                        selected_function = 'explain'
 
             pygame.display.update()
 
 if __name__ == '__main__':
     main()
+
+##########################
+## Bibliography
+##########################
+# Broude, Ronald.  “Composition, Performance, and Text in Solo Music of the French 
+# Baroque,” Text, 15 (2003):  19-49.
+#
+# Burkholder, J. Peter and Claude V. Palisca.  “85:  Elisabeth Jean-Claude Jacquet 
+# de la Guerre, Suite No. 3 in A Minor.”  In Norton Anthology of Western music, 
+# Sixth Edition, Volume One: Ancient to Baroque, 584-98.  New York:  W. W. Norton 
+# & Company, 2010.
+#
+# Cessac, Catherine.  “Jacquet de la Guerre, Elisabeth,” Oxford Music Online (2001),
+#  doi:  https://doi.org/10.1093/gmo/9781561592630.article.14084.
+# 
+# D’Anglebert, Jean-Henri.  “Marques des Agrements et leur signification” in Pièces
+# de clavecin in “ ‘Marques des Agrements et leurs significations’:  Table of 
+# ornaments by Anglebet [sic] from his Pièces de clavecin, 1689,” in “Ornaments,” 
+# by Kenneth Kreitner, et al.  Oxford Music Online (2001), doi:
+# https://doi.org/10.1093/gmo/9781561592630.article.49928.
+#
+# Hashimoto, Eiji.  “Baroque ornamentation:  a guide to correct interpretation,” 
+# The American Music Teacher 29, no. 2 (Nov. 1979):  6-10.
+#
+# Jacquet de la Guerre, Elisabeth.  Pièces de clavecín, livre 1 (Paris:  de Baussen, 1687).
+#
+# Jacquet de la Guerre, Elisabeth.  “Troisème suite” in Pièces de clavecin, livre 1, 
+# ed. Pierre Gouin (Montréal:  Les Éditions Outremontaises, 2022), 26-39.
+#
+# Kroll, Mark.  “L’Ornement mystérieux,” Early Music 45, no. 2 (May 2017):  297-309, 
+# doi:https://doi.org/10.1093/em/cax022.
+#
+# Moersch, Charlotte Mattax.  “Keyboard Improvisation in the Baroque Period.”  In 
+# Musical Improvisation:  Art, Education, and Society edited by Solis, Gabriel and 
+# Bruno Nettl, 150-170.  Chicago:  University of Illinois, 2009.
+#
+# Panov, Alexei and Ivan Rosanoff.  “ ‘L’Ornement mystérieux’ and Mark Kroll’s revision 
+# of the French baroque performance practice,”  Vestnik of Saint Petersburg University.  
+# Arts 8, no. 3 (2018):  328-55, doi:  https://doi.org/10.21638/11701/spbu15.2018.301.
+#
+# Reeves, Anthony R. “Understanding French Baroque Performance Practices Via a Modern 
+# Edition of Jean-Philippe Rameau’s In convertendo.”  PhD diss., University of Arizona, 2001.
