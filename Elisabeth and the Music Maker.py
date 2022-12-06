@@ -441,15 +441,6 @@ class Staff():
         ## notes on a beat are not purely in ascent or descent; they may curve and stems stick across the beam.
         ## There is no clear pattern to these curves, however; they are not always a translation of the curved
         ## line that would pass through the noteheads, for example, so for this program beams remain straight.
-        ##
-        ## All of these inconsistencies and nuances are examples of details that may be sacrificed when adapting
-        ## a piece into modern notation. In historical handwritten pieces, every single detail is important to
-        ## preserve, as they are all parts of the original artist's intentions with their art. While more
-        ## modern methods of facsimile creation, especially technological, can and will continue to improve on
-        ## their accuracy to source material, it will never be perfect. What is good about this program is that
-        ## it seeks not just to create or recreate pieces but also to demonstrate and utilize the exact methods 
-        ## that Jacquet used. Her notation is used and explained with proper context. Thus, regardless of the 
-        ## facsimile's accuracy, her original interpretation of how the piece should sound is preserved.
         ########################################################################################################
         # This sub-method beams the set of notes on one beat in one staff.
         def beam(noteset):
@@ -679,6 +670,19 @@ def main():
     ## is the agréments.  Though Jacquet did not publish a guide to interpreting them,
     ## other composers, such as d'Anglebert and Couperin, published conflicting guides
     ## at different times.
+    ##
+    ## All of these inconsistencies and nuances are examples of details that may be 
+    ## sacrificed when adapting a piece into modern notation. In historical handwritten 
+    ## pieces, every single detail is important to preserve, as they are all parts of the 
+    ## original artist's intentions with their art. While more modern methods of facsimile 
+    ## creation, especially technological, can and will continue to improve on their accuracy 
+    ## to source material, it will never be perfect. What is good about this program is that
+    ## it seeks not just to create or recreate pieces but also to demonstrate and utilize 
+    ## the exact methods that Jacquet used. While certain aspects of the original piece 
+    ## are ambiguous in function, the necessities for such assumptions are explained with 
+    ## proper context. Thus, regardless of the facsimile's accuracy, her original 
+    ## interpretation of how the piece should sound is preserved to the best of one's 
+    ## ability with the information that is known about Jacquet's work.
     ###################################################################################
     def output_music():
         agrements = False
