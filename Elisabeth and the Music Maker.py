@@ -670,6 +670,19 @@ def main():
     ## is the agréments.  Though Jacquet did not publish a guide to interpreting them,
     ## other composers, such as d'Anglebert and Couperin, published conflicting guides
     ## at different times.
+    ##
+    ## All of these inconsistencies and nuances are examples of details that may be 
+    ## sacrificed when adapting a piece into modern notation. In historical handwritten 
+    ## pieces, every single detail is important to preserve, as they are all parts of the 
+    ## original artist's intentions with their art. While more modern methods of facsimile 
+    ## creation, especially technological, can and will continue to improve on their accuracy 
+    ## to source material, it will never be perfect. What is good about this program is that
+    ## it seeks not just to create or recreate pieces but also to demonstrate and utilize 
+    ## the exact methods that Jacquet used. While certain aspects of the original piece 
+    ## are ambiguous in function, the necessities for such assumptions are explained with 
+    ## proper context. Thus, regardless of the facsimile's accuracy, her original 
+    ## interpretation of how the piece should sound is preserved to the best of one's 
+    ## ability with the information that is known about her work.
     ###################################################################################
     def output_music():
         agrements = False
@@ -814,7 +827,9 @@ def main():
     ## born and died in Paris, France, and composed vocal music in French and occasionally
     ## Italian and Latin; there is little evidence of her having spoken English, the native
     ## language of the game's intended audience; as such, her character speaks in English with
-    ## occasional French words, in the style called "Poirot Speak"
+    ## occasional French words, in the style called "Poirot Speak". While not accurate in 
+    ## its representation of Elizabeth or her personality, this dialogue is meant to be fun
+    ## and to keep the tutorial engaging to the user, not to educate one on Jacquet's life.
     #########################################################################################
     speech = '''Bonjour!  Je m'appelle Elisabeth Jean-Claude Jacquet de la Guerre.
     One of my favorite pastimes is to compose a beautiful harpsichord suite on a piece of parchment such as this.
