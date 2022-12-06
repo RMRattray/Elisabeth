@@ -129,7 +129,7 @@ def get_asset(assetname):
 # Graphics dictionaries are made by loading all of the files.
 CLEF_DICT = {"treble":get_asset("treble.png"),"cclef":get_asset("cclef.png"),"bass":get_asset("bass.png")}
 UPPER_CLEF_DICT = {"treble":get_asset("treble.png"),"cclef":get_asset("cclef.png")}
-CLEF_NOTE_DICT = {'treble':38,'cclef':36,'bass':26}
+CLEF_NOTE_DICT = {'treble':38,'cclef':36,'bass':28}
 TIME_DICT = {"common":get_asset("c.png"),"three":get_asset("three.png"),"cut":get_asset("cut.png"),
     "six-four":get_asset("six_four.png"),
     "three-two":get_asset("three_two.png")}
