@@ -1046,3 +1046,31 @@ if __name__ == '__main__':
 #
 # Reeves, Anthony R. “Understanding French Baroque Performance Practices Via a Modern 
 # Edition of Jean-Philippe Rameau’s In convertendo.”  PhD diss., University of Arizona, 2001.
+#
+# Webster, Peter. “Historical Perspectives on Technology and Music.” Music Educators 
+# Journal Vol. 89, No. 1, Special Focus: Changing Perspectives in Music Education 
+# (Sep., 2002), 38-43+54. Accessed Oct. 25, 2022 <https://www.jstor.org/stable/3399883>
+# 
+# Blum, Stephen. “Composition.” Grove Music Online. Jan. 20, 2001. Accessed Oct. 25, 2022. 
+# <https://www.oxfordmusiconline.com/grovemusic/view/10.1093/gmo/9781561592630.001.0001/omo-9781561592630-e-0000006216?rskey=zlZ5oj> 
+#
+# Fuller, David. “Suite.” Grove Music Online. Jan 20, 2001. Accessed Oct. 25, 2022. 
+# <https://www.oxfordmusiconline.com/grovemusic/view/10.1093/gmo/9781561592630.001.0001/omo-9781561592630-e-0000027091?rskey=NTWh6t#omo-9781561592630-e-0000027091-div1-0000027091.2>
+#
+# Politis, D., Margounakis, D., Spyridon, L., Papaleontiou, L., Botsaris, G. & Vandikas, K. 
+# “Emulation of Ancient Greek Music Using Sound Synthesis and Historical Notation.” 
+# Computer Music Journal Vol. 32, No. 4 (Winter, 2008), 48-63. Accessed Oct. 25, 2022. 
+# <https://www.jstor.org/stable/40072680>
+#
+# Silbiger, Alexander. Review: [Untitled]. Journal of the American Musicological Society 
+# Vol. 42, No. 1 (Spring 1989), 172-188. Accessed Oct. 25, 2022. <https://www.jstor.org/stable/831422>
+#
+# Borroff, Edith. Review: [Untitled]. Music & Letters Vol. 69, No. 2 (Apr., 1988), 309-310. 
+# Accessed Oct. 25, 2022. <https://www.jstor.org/stable/855260>
+#
+# Roehmann, Franz L. “Technology, Culture, and Music.” College Music Symposium Vol. 35 (1995), 
+# 124-131. Accessed Oct. 25, 2022. <https://www.jstor.org/stable/40374274>
+#
+# Case, Alex U. “Digital Audio Workstation [DAW].” Grove Music Online. Nov. 26, 2013.  Accessed Oct. 25, 2022. 
+# <https://www.oxfordmusiconline.com/grovemusic/view/10.1093/gmo/9781561592630.001.0001/omo-9781561592630-e-1002256346>
+
