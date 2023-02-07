@@ -28,8 +28,6 @@ import math
 import pygame
 from pygame import sprite
 pygame.init()
-pygame.mixer.init()
-pygame.mixer.music.set_volume(1.0)
 import os
 import random
 from midiutil import MIDIFile
@@ -975,7 +973,7 @@ def main():
                         elif selected_function == 'double':
                             speech = "The doublé certainly enlivens a scale passage."
                         elif selected_function == 'portdevoix':
-                            speech = "The port de voix, just an easy simple to draw ... after my time, Rameau would use that symbol for everything."
+                            speech = "The port de voix, just an easy symbol to draw ... after my time, Rameau would use that symbol for everything."
                         elif selected_function == 'appuye':
                             speech = "No trill is stronger than the tremblement appuyé!"
                         elif selected_function == 'mordent':
