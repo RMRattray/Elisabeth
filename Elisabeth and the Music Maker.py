@@ -24,6 +24,7 @@
 # midiutil library for the output of MIDI files.
 from os import environ
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+from pathlib import Path
 import math
 import pygame
 from pygame import sprite
@@ -33,11 +34,11 @@ import random
 from midiutil import MIDIFile
 
 # The following lines determine the dimensions of various on-screen objects in pixels.
-WINDOW_DIM = (1200,750) # Entire game window (width, height)
+WINDOW_DIM = (1200,640) # Entire game window (width, height)
 BUTTON_DIM = (60,80) # Buttons along the bottom of the screen
 BUFFER = 10 # Buffer between buttons and the edges of the screen
 BUTTON_RECT = pygame.Rect(0,WINDOW_DIM[1]-BUTTON_DIM[1]-2*BUFFER,WINDOW_DIM[0],BUTTON_DIM[1]+BUFFER*2)
-CHAT_WIDTH = 300 # Area at right where Elisabeth speaks
+CHAT_WIDTH = 240 # Area at right where Elisabeth speaks
 CHAT_RECT = pygame.Rect(WINDOW_DIM[0]-CHAT_WIDTH,0,CHAT_WIDTH,BUTTON_RECT.top)
 PAPER_RECT = pygame.Rect(0,0,CHAT_RECT.left,BUTTON_RECT.top)
 SYSTEMS = 3 # The number of systems, or grand staves, of music in the window
@@ -56,7 +57,7 @@ UNCLICKED_BUTTON = (200,200,200)
 CLICKED_BUTTON = (180,180,180)
 PAPER_COLOR = (230,230,200)
 INK_COLOR = (40,20,20)
-DEFAULT_FONT = pygame.font.SysFont('constantia',18)
+DEFAULT_FONT = pygame.font.SysFont('constantia',16)
 
 # The following functions, linebreak and bliterate, were written by Robert Rattray for a 
 # previous project, Wolf Adventure.
@@ -120,9 +121,10 @@ def bliterate(screen,text,x,y,width,height=0,justify=False,outerbuffer=0,buffer=
     return runningheight, max(widths)
 
 # Code to retrieve image files easily.  May need to be changed if run on other device.
-MAIN_DIR = os.path.dirname(os.getcwd())
+MAIN_DIR = os.getcwd()
+# MAIN_DIR = Path(__file__).parent
 def get_asset(assetname):
-    return pygame.image.load(os.path.join(MAIN_DIR,'Elisabeth','Elisabeth_Assets',assetname))
+    return pygame.image.load(os.path.join(MAIN_DIR,'Elisabeth_Assets',assetname))
 
 # Graphics dictionaries are made by loading all of the files.
 CLEF_DICT = {"treble":get_asset("treble.png"),"cclef":get_asset("cclef.png"),"bass":get_asset("bass.png")}
@@ -272,9 +274,9 @@ class Note():
         self.position = ( int(self.staff.position[0]+STAFF_HEIGHT/2+SIGN_STAFF_LENGTH+distalong), int(self.staff.position[1]+STAFF_HEIGHT+distdown) )
         centerx = int(STAFF_LENGTH/(32*MEASURES_PER)) + self.position[0]
         if self.orientation:
-            self.tip_position = (int(centerx+STAFF_HEIGHT/8-NOTE_LINE),int(STAFF_HEIGHT/4+self.position[1]))
+            self.tip_position = (int(centerx+STAFF_HEIGHT/6-NOTE_LINE),int(STAFF_HEIGHT/4+self.position[1]))
         else:
-            self.tip_position = (int(centerx-STAFF_HEIGHT/8+NOTE_LINE),self.position[1]+self.rect.height)
+            self.tip_position = (int(centerx-STAFF_HEIGHT/6+NOTE_LINE),self.position[1]+self.rect.height)
         self.rect = pygame.Rect(self.position[0],self.position[1],int(self.duration*STAFF_LENGTH*self.staff.timesig[1]/(MEASURES_PER*self.staff.timesig[0])),int(1.25*STAFF_HEIGHT))
     
     # This method convert the printed pitch (like 'b4' with a sharp or 'c5') to a MIDI pitch (like '72').
@@ -298,26 +300,26 @@ class Note():
         if self.orientation:
             headpos = (centerx,int(9*STAFF_HEIGHT/8) + self.position[1])
         if self.duration >= 0.5:
-            pygame.draw.circle(self.staff.screen,INK_COLOR,headpos,int(STAFF_HEIGHT/8),NOTE_LINE)
+            pygame.draw.circle(self.staff.screen,INK_COLOR,headpos,int(STAFF_HEIGHT/6),NOTE_LINE)
         else:
-            pygame.draw.circle(self.staff.screen,INK_COLOR,headpos,int(STAFF_HEIGHT/8))
+            pygame.draw.circle(self.staff.screen,INK_COLOR,headpos,int(STAFF_HEIGHT/6))
         # Draw note stem to surface
         if self.duration < 1:
             if self.orientation:
-                pygame.draw.line(self.staff.screen,INK_COLOR,(int(centerx+STAFF_HEIGHT/8-NOTE_LINE),headpos[1]),self.tip_position,NOTE_LINE)
+                pygame.draw.line(self.staff.screen,INK_COLOR,(int(centerx+STAFF_HEIGHT/6-NOTE_LINE),headpos[1]),self.tip_position,NOTE_LINE)
             else:
-                pygame.draw.line(self.staff.screen,INK_COLOR,(int(centerx-STAFF_HEIGHT/8+NOTE_LINE),headpos[1]),self.tip_position,NOTE_LINE)
+                pygame.draw.line(self.staff.screen,INK_COLOR,(int(centerx-STAFF_HEIGHT/6+NOTE_LINE),headpos[1]),self.tip_position,NOTE_LINE)
         # Draw dot (if it exists)
         if self.duration * 32 % 3 == 0:
             pygame.draw.circle(self.staff.screen,INK_COLOR,(headpos[0]+int(STAFF_HEIGHT/4),headpos[1]),NOTE_LINE)
         # Draw accidental (if it is marked)
         if self.accidental != '':
-            mark = pygame.transform.scale(ACCI_DICT[self.accidental],(int(STAFF_HEIGHT/4),int(STAFF_HEIGHT/3)))
-            self.staff.screen.blit(mark,(int(headpos[0]-STAFF_HEIGHT/4),int(headpos[1]-STAFF_HEIGHT/3)))
+            mark = pygame.transform.scale(ACCI_DICT[self.accidental],(int(STAFF_HEIGHT/3),int(STAFF_HEIGHT/2)))
+            self.staff.screen.blit(mark,(int(headpos[0]-STAFF_HEIGHT/3),int(headpos[1]-STAFF_HEIGHT/2)))
         # Draw agrement (if it exists)
         if self.agrement != '':
-            mark = pygame.transform.scale(AGREMENT_DICT[self.agrement],(int(STAFF_HEIGHT/3),int(STAFF_HEIGHT/3)))
-            self.staff.screen.blit(mark,(int(centerx-STAFF_HEIGHT/6),int(self.position[1]-STAFF_HEIGHT/3)))
+            mark = pygame.transform.scale(AGREMENT_DICT[self.agrement],(int(STAFF_HEIGHT/2),int(STAFF_HEIGHT/2)))
+            self.staff.screen.blit(mark,(int(centerx-STAFF_HEIGHT/4),int(self.position[1]-STAFF_HEIGHT/3)))
         # Draw ledger lines (if necessary)
         if self.rung > CLEF_NOTE_DICT[self.staff.clef]:
             for l in range((self.rung - CLEF_NOTE_DICT[self.staff.clef]) // 2):
@@ -877,7 +879,7 @@ def main():
                     timebutton.selectable = False
     speech += '''\n\nChange or add a clef in your piece with this tool here.
     I always use the baritone clef, but will leave you your choice of the treble
-    or the C-clef, which places middle C on the bottom line of the upper staff.”
+    or the C-clef, which places middle C on the bottom line of the upper staff.
     '''
     parle(screen,speech) # Same process with choosing a C-clef or a G-clef for the upper register.
     clefbutton.selectable = True
